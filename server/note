@@ -1,0 +1,4 @@
+✅ Controller chỉ tập trung nhận request và trả response.
+✅ Service xử lý logic phức tạp (tính toán, kiểm tra điều kiện, thao tác DB, ...).
+
+body-parser để phản hồi (như res.body,...)
