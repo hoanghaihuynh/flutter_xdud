@@ -5,6 +5,7 @@ import 'package:myproject/models/products.dart';
 import 'package:myproject/utils/constants.dart';
 import 'package:myproject/widgets/coffee_card.dart';
 import 'package:myproject/screen/cart_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({Key? key}) : super(key: key);
@@ -16,13 +17,27 @@ class ShopScreen extends StatefulWidget {
 class _ShopScreenState extends State<ShopScreen> {
   String selectedCategory = 'All';
   List<Products> filteredItems = [];
-  List<Products> allProducts = []; // Danh sách sản phẩm từ API
-  bool isLoading = true; // Trạng thái loading
+  List<Products> allProducts = [];
+  bool isLoading = true;
+  String? userId; // Thêm biến lưu trữ userId
 
   @override
   void initState() {
     super.initState();
-    fetchProducts(); // Gọi API khi màn hình được load
+    _loadUserId(); // Tải userId khi khởi tạo
+    fetchProducts();
+  }
+
+  // Hàm tải userId từ SharedPreferences
+  Future<void> _loadUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        userId = prefs.getString('userId');
+      });
+    } catch (e) {
+      print('Error getting userId: $e');
+    }
   }
 
   Future<void> fetchProducts() async {
@@ -70,7 +85,6 @@ class _ShopScreenState extends State<ShopScreen> {
           IconButton(
             icon: const Icon(Icons.shopping_cart),
             onPressed: () {
-              // Điều hướng đến giỏ hàng
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const CartScreen()),
@@ -80,12 +94,9 @@ class _ShopScreenState extends State<ShopScreen> {
         ],
       ),
       body: isLoading
-          ? Center(
-              child:
-                  CircularProgressIndicator()) // Hiển thị loading khi gọi API
+          ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Thanh tìm kiếm
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: TextField(
@@ -101,8 +112,6 @@ class _ShopScreenState extends State<ShopScreen> {
                     ),
                   ),
                 ),
-
-                // Danh mục sản phẩm
                 SizedBox(
                   height: 50,
                   child: ListView.builder(
@@ -138,14 +147,12 @@ class _ShopScreenState extends State<ShopScreen> {
                     },
                   ),
                 ),
-
-                // Grid sản phẩm
                 Expanded(
                   child: GridView.builder(
                     shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.all(16),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       childAspectRatio: 0.7,
                       crossAxisSpacing: 16,
@@ -153,7 +160,10 @@ class _ShopScreenState extends State<ShopScreen> {
                     ),
                     itemCount: filteredItems.length,
                     itemBuilder: (context, index) {
-                      return CoffeeCard(coffee: filteredItems[index]);
+                      return CoffeeCard(
+                        coffee: filteredItems[index],
+                        userId: userId ?? '', // Truyền userId hoặc chuỗi rỗng nếu null
+                      );
                     },
                   ),
                 ),

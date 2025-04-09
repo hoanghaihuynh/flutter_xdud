@@ -1,14 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:myproject/models/products.dart';
 import 'package:myproject/utils/constants.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class CoffeeCard extends StatelessWidget {
   final Products coffee;
+  final String userId; // Thêm userId để sử dụng trong API
 
   const CoffeeCard({
     Key? key,
     required this.coffee,
+    required this.userId, // Thêm userId vào constructor
   }) : super(key: key);
+
+  // Hàm call API thêm sản phẩm vào giỏ hàng
+  Future<void> addToCart(BuildContext context) async {
+    const String apiUrl =
+        'http://192.168.1.5:3000/cart/insertCart'; // Thay bằng endpoint thực tế của bạn
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "userId": userId,
+          "productId": coffee.id, // Giả sử Products model có trường id
+          "quantity": 1 // Mặc định thêm 1 sản phẩm
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        // Hiển thị thông báo thành công
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('THÊM THÀNH CÔNG'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        // Xử lý khi API trả về lỗi
+        final responseData = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(responseData['message'] ?? 'Có lỗi xảy ra'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Xử lý lỗi kết nối
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi kết nối: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,16 +160,19 @@ class CoffeeCard extends StatelessWidget {
                           color: kTextColor1,
                         ),
                       ),
-                      Container(
-                        padding: EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: kTextColor1,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.add,
-                          color: Colors.white,
-                          size: 20,
+                      GestureDetector(
+                        onTap: () => addToCart(context),
+                        child: Container(
+                          padding: EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: kTextColor1,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.add,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ],
