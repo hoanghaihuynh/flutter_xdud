@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:myproject/models/products.dart';
+import 'package:myproject/screen/productDetail_screen.dart';
 import 'package:myproject/utils/constants.dart';
 import 'package:myproject/widgets/coffee_card.dart';
 import 'package:myproject/screen/cart_screen.dart';
@@ -161,10 +162,22 @@ class _ShopScreenState extends State<ShopScreen> {
                     ),
                     itemCount: filteredItems.length,
                     itemBuilder: (context, index) {
-                      return CoffeeCard(
-                        coffee: filteredItems[index],
-                        userId: userId ??
-                            '', // Truyền userId hoặc chuỗi rỗng nếu null
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProductDetail(
+                                product: filteredItems[index],
+                                userId: userId ?? '',
+                              ),
+                            ),
+                          );
+                        },
+                        child: CoffeeCard(
+                          coffee: filteredItems[index],
+                          userId: userId ?? '',
+                        ),
                       );
                     },
                   ),
