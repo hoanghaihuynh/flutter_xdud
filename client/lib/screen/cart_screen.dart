@@ -47,7 +47,7 @@ class _CartScreenState extends State<CartScreen> {
       }
 
       final url =
-          Uri.parse('http://192.168.1.5:3000/cart/getCartByUserId/$userId');
+          Uri.parse('http://192.168.1.35:3000/cart/getCartByUserId/$userId');
       final response = await http.get(url).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -123,7 +123,7 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = true;
       });
 
-      final url = Uri.parse('http://192.168.1.5:3000/cart/removeProduct/');
+      final url = Uri.parse('http://cart/:3000/cart/removeProduct/');
       final response = await http.delete(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -172,7 +172,7 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = true;
       });
 
-      final url = Uri.parse('http://192.168.1.5:3000/cart/updateQuantity');
+      final url = Uri.parse('http://cart/:3000/cart/updateQuantity');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -432,45 +432,44 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildQuantityControl(CartItem item) {
+    final TextEditingController _quantityController = TextEditingController(
+      text: item.quantity.toString(),
+    );
+
     return Container(
+      width: 100, // Đặt chiều rộng cố định
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[300]!),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        children: [
-          InkWell(
-            onTap: () => _updateQuantity(item.id, item.quantity - 1),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                border: Border(
-                  right: BorderSide(color: Colors.grey[300]!),
-                ),
-              ),
-              child: const Icon(Icons.remove, size: 16),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Text(
-              item.quantity.toString(),
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          InkWell(
-            onTap: () => _updateQuantity(item.id, item.quantity + 1),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(color: Colors.grey[300]!),
-                ),
-              ),
-              child: const Icon(Icons.add, size: 16),
-            ),
-          ),
-        ],
+      child: TextField(
+        controller: _quantityController,
+        keyboardType: TextInputType.number,
+        textAlign: TextAlign.center,
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(vertical: 8),
+        ),
+        style: const TextStyle(fontWeight: FontWeight.bold),
+        onSubmitted: (value) {
+          final newQuantity = int.tryParse(value) ?? item.quantity;
+          if (newQuantity > 0 && newQuantity != item.quantity) {
+            _updateQuantity(item.id, newQuantity);
+          } else {
+            // Nếu giá trị không hợp lệ, khôi phục giá trị cũ
+            _quantityController.text = item.quantity.toString();
+          }
+        },
+        onEditingComplete: () {
+          // Xử lý khi hoàn thành chỉnh sửa (tương tự onSubmitted)
+          final value = _quantityController.text;
+          final newQuantity = int.tryParse(value) ?? item.quantity;
+          if (newQuantity > 0 && newQuantity != item.quantity) {
+            _updateQuantity(item.id, newQuantity);
+          } else {
+            _quantityController.text = item.quantity.toString();
+          }
+        },
       ),
     );
   }

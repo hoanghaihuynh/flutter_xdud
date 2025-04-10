@@ -43,7 +43,7 @@ class _ShopScreenState extends State<ShopScreen> {
   Future<void> fetchProducts() async {
     try {
       final response =
-          await http.get(Uri.parse('http://192.168.1.5:3000/products/getAll'));
+          await http.get(Uri.parse('http://192.168.1.35:3000/products/getAll'));
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         List<dynamic> productsJson = data['products'];
@@ -152,7 +152,8 @@ class _ShopScreenState extends State<ShopScreen> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(16),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       childAspectRatio: 0.7,
                       crossAxisSpacing: 16,
@@ -162,7 +163,8 @@ class _ShopScreenState extends State<ShopScreen> {
                     itemBuilder: (context, index) {
                       return CoffeeCard(
                         coffee: filteredItems[index],
-                        userId: userId ?? '', // Truyền userId hoặc chuỗi rỗng nếu null
+                        userId: userId ??
+                            '', // Truyền userId hoặc chuỗi rỗng nếu null
                       );
                     },
                   ),
