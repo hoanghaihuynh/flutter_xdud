@@ -161,7 +161,7 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  Future<void> _updateQuantity(String id, int quantity) async {
+  Future<void> _updateQuantity(String productId, int quantity) async {
     if (quantity < 1) return;
 
     try {
@@ -172,16 +172,20 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = true;
       });
 
-      final url = Uri.parse('http://cart/:3000/cart/updateQuantity');
-      final response = await http.post(
+      final url = Uri.parse('http://192.168.1.35:3000/cart/updateCartQuantity');
+      final response = await http.put(
         url,
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'userId': userId,
-          'productId': id,
-          'quantity': quantity,
+          'productId': productId,
+          'newQuantity': quantity,
         }),
       );
+
+      final responseData = jsonDecode(response.body);
+
+      print('responseData: $responseData');
 
       setState(() {
         _isLoading = false;
@@ -454,7 +458,7 @@ class _CartScreenState extends State<CartScreen> {
         onSubmitted: (value) {
           final newQuantity = int.tryParse(value) ?? item.quantity;
           if (newQuantity > 0 && newQuantity != item.quantity) {
-            _updateQuantity(item.id, newQuantity);
+            _updateQuantity(item.productId, newQuantity);
           } else {
             // Nếu giá trị không hợp lệ, khôi phục giá trị cũ
             _quantityController.text = item.quantity.toString();
@@ -465,7 +469,7 @@ class _CartScreenState extends State<CartScreen> {
           final value = _quantityController.text;
           final newQuantity = int.tryParse(value) ?? item.quantity;
           if (newQuantity > 0 && newQuantity != item.quantity) {
-            _updateQuantity(item.id, newQuantity);
+            _updateQuantity(item.productId, newQuantity);
           } else {
             _quantityController.text = item.quantity.toString();
           }
