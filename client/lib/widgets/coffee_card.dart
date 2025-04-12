@@ -17,7 +17,7 @@ class CoffeeCard extends StatelessWidget {
   // Hàm call API thêm sản phẩm vào giỏ hàng
   Future<void> addToCart(BuildContext context) async {
     const String apiUrl =
-        'http://192.168.1.35:3000/cart/insertCart'; // Thay bằng endpoint thực tế của bạn
+        'http://192.168.1.5:3000/cart/insertCart'; // Thay bằng endpoint thực tế của bạn
 
     try {
       final response = await http.post(
@@ -34,7 +34,7 @@ class CoffeeCard extends StatelessWidget {
         // Hiển thị thông báo thành công
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('THÊM THÀNH CÔNG'),
+            content: Text('ĐÃ THÊM VÀO GIỎ HÀNG'),
             backgroundColor: Colors.green,
           ),
         );

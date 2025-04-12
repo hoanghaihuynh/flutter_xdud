@@ -47,7 +47,7 @@ class _CartScreenState extends State<CartScreen> {
       }
 
       final url =
-          Uri.parse('http://192.168.1.35:3000/cart/getCartByUserId/$userId');
+          Uri.parse('http://192.168.1.5:3000/cart/getCartByUserId/$userId');
       final response = await http.get(url).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -123,7 +123,7 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = true;
       });
 
-      final url = Uri.parse('http://cart/:3000/cart/removeProduct/');
+      final url = Uri.parse('http://192.168.1.5:3000/cart/removeProduct/');
       final response = await http.delete(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -143,7 +143,7 @@ class _CartScreenState extends State<CartScreen> {
 
       if (response.statusCode == 200) {
         _showSnackBar(
-          responseData['message'] ?? 'Item removed successfully',
+          responseData['message'] ?? 'XÓA SẢN PHẨM KHỎI GIỎ HÀNG THÀNH CÔNG',
           isError: false,
         );
         _fetchCart(); // Refresh cart
@@ -172,7 +172,7 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = true;
       });
 
-      final url = Uri.parse('http://192.168.1.35:3000/cart/updateCartQuantity');
+      final url = Uri.parse('http://192.168.1.5:3000/cart/updateCartQuantity');
       final response = await http.put(
         url,
         headers: {'Content-Type': 'application/json'},

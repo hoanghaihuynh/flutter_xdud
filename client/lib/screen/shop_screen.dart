@@ -44,7 +44,7 @@ class _ShopScreenState extends State<ShopScreen> {
   Future<void> fetchProducts() async {
     try {
       final response =
-          await http.get(Uri.parse('http://192.168.1.35:3000/products/getAll'));
+          await http.get(Uri.parse('http://192.168.1.5:3000/products/getAll'));
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         List<dynamic> productsJson = data['products'];
