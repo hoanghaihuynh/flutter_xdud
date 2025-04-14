@@ -1,5 +1,6 @@
 // services/orderService.js
 const OrderModel = require("./../model/orderSchema");
+const UserModel = require("./../model/userSchema");
 
 // thêm đơn hàng
 const insertOrder = async (orderData) => {
@@ -24,7 +25,19 @@ const getAllOrder = async () => {
   }
 };
 
+const getOrdersByUserId = async (userId) => {
+  try {
+    const orders = await OrderModel.find({ user_id: userId })
+      .populate("user_id", "email")
+      .populate("products.product_id", "name price");
+    return orders;
+  } catch (error) {
+    throw new Error("Failed to get orders by user ID: " + error.message);
+  }
+};
+
 module.exports = {
   insertOrder,
   getAllOrder,
+  getOrdersByUserId,
 };

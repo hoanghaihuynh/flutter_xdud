@@ -21,10 +21,17 @@ exports.insertOrder = async (req, res) => {
   }
 };
 
-// Xem đơn hàng
+// Xem ds đơn hàng hoặc đơn hàng theo user id
 exports.getAllOrder = async (req, res) => {
   try {
-    const orders = await orderService.getAllOrder();
+    const { user_id } = req.query;
+
+    let orders;
+    if (user_id) {
+      orders = await orderService.getOrdersByUserId(user_id);
+    } else {
+      orders = await orderService.getAllOrder();
+    }
     res.status(200).json({
       status: 200,
       message: "Lấy danh sách đơn hàng thành công",
