@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:myproject/dashboard.dart';
+import 'package:myproject/landing_page.dart';
 import 'package:myproject/screen/register_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
@@ -85,9 +85,9 @@ class _LoginScreenState extends State<LoginScreen> {
           // Lưu userId vào SharedPreferences
           prefs.setString('userId', userId);
 
-          // Chuyển đến Dashboard
+          // Chuyển đến LandingPage
           Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => Dashboard(token: myToken)));
+              MaterialPageRoute(builder: (_) => LandingPage(token: myToken)));
         } else {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(

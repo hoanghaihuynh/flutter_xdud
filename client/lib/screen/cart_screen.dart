@@ -32,7 +32,7 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  // Fetch cart by User ID
+  // Lấy giỏ hàng theo user id
   Future<void> _fetchCart() async {
     try {
       final userId = await _getUserId();
@@ -108,6 +108,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  // xóa sản phẩm khỏi giỏ hàng
   Future<void> _removeItem(String cartItemId, String productId) async {
     try {
       final userId = await _getUserId();
@@ -161,6 +162,7 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
+  // thay đổi số lượng sp
   Future<void> _updateQuantity(String productId, int quantity) async {
     if (quantity < 1) return;
 
@@ -204,6 +206,7 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
+  // hiển thị thông báo khi thêm xóa sửa thành công
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -217,6 +220,9 @@ class _CartScreenState extends State<CartScreen> {
       ),
     );
   }
+
+  // đặt hàng
+  
 
   @override
   Widget build(BuildContext context) {

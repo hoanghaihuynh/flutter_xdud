@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:myproject/utils/constants.dart';
+import 'package:myproject/screen/shop_screen.dart';
+import 'package:myproject/screen/login_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LandingPage extends StatefulWidget {
   final token;
@@ -28,8 +32,10 @@ class _LandingPageState extends State<LandingPage> {
   }
 
   void _navigateToShop() {
-    // Implement your shop navigation logic here
-    print('Navigating to shop...');
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ShopScreen()),
+    );
   }
 
   @override
@@ -46,160 +52,192 @@ class _LandingPageState extends State<LandingPage> {
             ],
           ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // App Bar
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0.0,
+              right: -70.0,
+              child: Image.asset("assets/images/img_3.png"),
+            ),
+            Positioned(
+              top: 0.0,
+              left: 0.0,
+              width: MediaQuery.of(context).size.width,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 24.0),
+                height: MediaQuery.of(context).size.height,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Welcome',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                    SizedBox(height: 60),
+
+                    // Email Card
+                    // Email Card với nút đăng xuất
+                    Container(
+                      width: double.infinity,
+                      margin: EdgeInsets.only(right: 60),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          children: [
+                            // Biểu tượng email
+                            Container(
+                              padding: EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: kTextColor1.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.email_outlined,
+                                color: kTextColor1,
+                                size: 24,
+                              ),
+                            ),
+                            SizedBox(width: 16),
+
+                            // Thông tin email
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Your Email",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    email,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: kTextColor1,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Nút đăng xuất
+                            IconButton(
+                              icon: Icon(Icons.logout, color: Colors.red),
+                              onPressed: () async {
+                                final confirm = await showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text("Đăng xuất"),
+                                    content: Text(
+                                        "Bạn có chắc chắn muốn đăng xuất?"),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: Text("Hủy"),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: Text("Đăng xuất",
+                                            style:
+                                                TextStyle(color: Colors.red)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirm == true) {
+                                  // Xử lý đăng xuất
+                                  final prefs =
+                                      await SharedPreferences.getInstance();
+                                  await prefs.remove('token');
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => LoginScreen()),
+                                  );
+                                }
+                              },
+                              tooltip: 'Đăng xuất',
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    CircleAvatar(
-                      backgroundColor: Colors.blue.shade200,
-                      child: Icon(
-                        Icons.person,
-                        color: Colors.white,
+
+                    SizedBox(height: 80),
+                    Text(
+                      "Shop Best\nCoffee\nTown",
+                      style: TextStyle(
+                          fontSize: 35,
+                          height: 1.3,
+                          color: kTextColor1,
+                          fontWeight: FontWeight.w700),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      "Experience the best taste of coffee with us exclusively ",
+                      style: TextStyle(
+                          fontSize: 18, height: 1.8, color: Colors.white),
+                    ),
+
+                    SizedBox(height: 40),
+
+                    // Shop Now Button
+                    ElevatedButton(
+                      onPressed: _navigateToShop,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kTextColor1,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 5,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'SHOP NOW',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 20,
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-
-              // User Email Card
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.email,
-                          color: Colors.blue,
-                          size: 28,
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Your Email',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              Text(
-                                email,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // Main Content with Shop Now Button
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        'assets/shopping.png', // Add this image to your assets
-                        height: 180,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.shopping_bag,
-                            size: 120,
-                            color: Colors.blue.shade300,
-                          );
-                        },
-                      ),
-                      SizedBox(height: 24),
-                      Text(
-                        'Discover Amazing Products',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 12),
-                      Text(
-                        'Browse our collection of premium items',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey.shade700,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 32),
-                      ElevatedButton(
-                        onPressed: _navigateToShop,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 48,
-                            vertical: 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          elevation: 5,
-                        ),
-                        child: Text(
-                          'SHOP NOW',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Footer
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  '© 2025 Your Company. All rights reserved.',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 12,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
+            )
+          ],
         ),
       ),
     );
   }
 }
-
