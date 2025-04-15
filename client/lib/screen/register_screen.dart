@@ -116,24 +116,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // // Full Name Field
-                      // TextFormField(
-                      //   controller: _nameController,
-                      //   decoration: const InputDecoration(
-                      //     labelText: 'Full Name',
-                      //     hintText: 'Enter your full name',
-                      //     prefixIcon: Icon(Icons.person_outline),
-                      //   ),
-                      //   textInputAction: TextInputAction.next,
-                      //   validator: (value) {
-                      //     if (value == null || value.isEmpty) {
-                      //       return 'Please enter your name';
-                      //     }
-                      //     return null;
-                      //   },
-                      // ),
-                      // const SizedBox(height: 16),
-
                       // Email Field
                       TextFormField(
                         controller: _emailController,
@@ -191,38 +173,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Confirm Password Field
-                      // TextFormField(
-                      //   controller: _confirmPasswordController,
-                      //   decoration: InputDecoration(
-                      //     labelText: 'Confirm Password',
-                      //     hintText: 'Confirm your password',
-                      //     prefixIcon: const Icon(Icons.lock_outline),
-                      //     suffixIcon: IconButton(
-                      //       icon: Icon(
-                      //         _isConfirmPasswordVisible
-                      //             ? Icons.visibility_outlined
-                      //             : Icons.visibility_off_outlined,
-                      //       ),
-                      //       onPressed: () {
-                      //         setState(() {
-                      //           _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
-                      //         });
-                      //       },
-                      //     ),
-                      //   ),
-                      //   obscureText: !_isConfirmPasswordVisible,
-                      //   textInputAction: TextInputAction.done,
-                      //   validator: (value) {
-                      //     if (value == null || value.isEmpty) {
-                      //       return 'Please confirm your password';
-                      //     }
-                      //     if (value != _passwordController.text) {
-                      //       return 'Passwords do not match';
-                      //     }
-                      //     return null;
-                      //   },
-                      // ),
                       const SizedBox(height: 24),
 
                       // Register Button

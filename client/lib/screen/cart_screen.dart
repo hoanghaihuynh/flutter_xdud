@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:myproject/screen/orderDetails_screen.dart';
 import 'package:myproject/models/carts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -22,6 +23,7 @@ class _CartScreenState extends State<CartScreen> {
     _fetchCart();
   }
 
+  // lấy user_id
   Future<String?> _getUserId() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -101,6 +103,7 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
+  // tính tổng giỏ hàng
   double get totalPrice {
     return _cartItems.fold(
       0,
@@ -221,8 +224,67 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  // đặt hàng
-  
+  // call api đặt hàng
+  Future<void> _insertOrder() async {
+    final userId = await _getUserId();
+
+    if (userId == null || userId.isEmpty) {
+      _showSnackBar('User not logged in', isError: true);
+      return;
+    }
+
+    if (_cartItems.isEmpty) {
+      _showSnackBar('Cart is empty', isError: true);
+      return;
+    }
+
+    final List<Map<String, dynamic>> productList = _cartItems.map((item) {
+      return {
+        "product_id": item.productId,
+        "quantity": item.quantity,
+        "price": item.price
+      };
+    }).toList();
+
+    final orderData = {
+      "user_id": userId,
+      "products": productList,
+      "total": totalPrice,
+      "status": "pending"
+    };
+
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final url = Uri.parse('http://192.168.1.5:3000/order/insertOrder');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(orderData),
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _showSnackBar('ĐẶT HÀNG THÀNH CÔNG');
+        _fetchCart(); // Làm mới giỏ hàng
+      } else {
+        _showSnackBar('Failed to place order: ${responseData['message']}',
+            isError: true);
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      _showSnackBar('Error placing order: $e', isError: true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -236,9 +298,41 @@ class _CartScreenState extends State<CartScreen> {
         centerTitle: true,
         elevation: 0,
         actions: [
+          // Icon xem đơn hàng
+          IconButton(
+            icon: const Icon(Icons.receipt_long), // Hoặc Icons.list_alt
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => OrderDetailsScreen(
+                          orderData: {
+                            "_id": "ORDER123",
+                            "user_email": "example@gmail.com",
+                            "products": [
+                              {
+                                "product_name": "Cà phê sữa",
+                                "price": 45000,
+                                "quantity": 2
+                              },
+                              {
+                                "product_name": "Cà phê đen",
+                                "price": 40000,
+                                "quantity": 1
+                              }
+                            ],
+                            "total": 130000
+                          },
+                        )),
+              );
+            },
+            tooltip: 'Xem đơn hàng',
+          ),
+          // Icon refresh
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _fetchCart,
+            tooltip: 'Làm mới giỏ hàng',
           ),
         ],
       ),
@@ -573,9 +667,7 @@ class _CartScreenState extends State<CartScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  // Implement checkout logic
-                },
+                onPressed: _insertOrder,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
