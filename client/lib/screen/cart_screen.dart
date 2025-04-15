@@ -302,29 +302,7 @@ class _CartScreenState extends State<CartScreen> {
           IconButton(
             icon: const Icon(Icons.receipt_long), // Hoặc Icons.list_alt
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => OrderDetailsScreen(
-                          orderData: {
-                            "_id": "ORDER123",
-                            "user_email": "example@gmail.com",
-                            "products": [
-                              {
-                                "product_name": "Cà phê sữa",
-                                "price": 45000,
-                                "quantity": 2
-                              },
-                              {
-                                "product_name": "Cà phê đen",
-                                "price": 40000,
-                                "quantity": 1
-                              }
-                            ],
-                            "total": 130000
-                          },
-                        )),
-              );
+              // Navigator.push();
             },
             tooltip: 'Xem đơn hàng',
           ),

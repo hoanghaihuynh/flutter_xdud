@@ -25,6 +25,7 @@ const getAllOrder = async () => {
   }
 };
 
+// lấy ds đơn hàng theo user id
 const getOrdersByUserId = async (userId) => {
   try {
     const orders = await OrderModel.find({ user_id: userId })
