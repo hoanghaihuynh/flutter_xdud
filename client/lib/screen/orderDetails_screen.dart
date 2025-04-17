@@ -1,6 +1,6 @@
-// services/order_service.dart
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import './../models/orders.dart';
 
@@ -128,7 +128,10 @@ class OrderCard extends StatelessWidget {
                     children: [
                       Text('${item.quantity}x '),
                       Expanded(child: Text(item.product.name)),
-                      Text('\$${item.price.toStringAsFixed(0)}'),
+                      Text(
+                        NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
+                            .format(item.price),
+                      ),
                     ],
                   ),
                 )),
@@ -141,12 +144,13 @@ class OrderCard extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '\$${order.total.toStringAsFixed(0)}',
+                  NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
+                      .format(order.total),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                   ),
-                ),
+                )
               ],
             ),
           ],

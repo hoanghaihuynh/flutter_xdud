@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:myproject/screen/orderDetails_screen.dart';
 import 'package:myproject/models/carts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({Key? key}) : super(key: key);
@@ -109,6 +110,12 @@ class _CartScreenState extends State<CartScreen> {
       0,
       (sum, item) => sum + (item.price * item.quantity),
     );
+  }
+
+  // Format lại giá sản phẩm
+  String formatCurrency(double amount) {
+    final format = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+    return format.format(amount);
   }
 
   // Call api xóa sản phẩm khỏi giỏ hàng
@@ -518,7 +525,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '\$${item.price.toStringAsFixed(2)}',
+                    formatCurrency(item.price),
                     style: TextStyle(
                       color: Theme.of(context).primaryColor,
                       fontWeight: FontWeight.bold,
@@ -624,7 +631,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 ),
                 Text(
-                  '\$${totalPrice.toStringAsFixed(2)}',
+                  formatCurrency(totalPrice),
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -668,7 +675,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 ),
                 Text(
-                  '\$${totalPrice.toStringAsFixed(2)}',
+                  formatCurrency(totalPrice),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

@@ -3,6 +3,7 @@ import 'package:myproject/models/products.dart';
 import 'package:myproject/utils/constants.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:intl/intl.dart';
 
 class CoffeeCard extends StatelessWidget {
   final Products coffee;
@@ -153,7 +154,7 @@ class CoffeeCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '\$${coffee.price.toStringAsFixed(2)}',
+                        '${NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(coffee.price)}',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
