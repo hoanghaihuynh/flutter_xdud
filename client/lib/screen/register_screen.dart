@@ -37,7 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _isLoading = true;
     });
 
-    const String registration = "http://192.168.1.5:3000/registration";
+    const String registration = "http://192.168.242.234:3000/registration";
 
     try {
       final response = await http.post(
@@ -53,25 +53,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
       print(responseData['response']);
       if (response.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Đăng ký thành công!"), backgroundColor: Colors.green),
+          SnackBar(
+              content: Text("Đăng ký thành công!"),
+              backgroundColor: Colors.green),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(responseData["message"] ?? "Lỗi đăng ký!"), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text(responseData["message"] ?? "Lỗi đăng ký!"),
+              backgroundColor: Colors.red),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lỗi kết nối đến server!"), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text("Lỗi kết nối đến server!"),
+            backgroundColor: Colors.red),
       );
     }
 
     setState(() {
       _isLoading = false;
     });
-
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -95,17 +99,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Text(
                   'Create Account',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Please fill in the form to continue',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.black54,
-                  ),
+                        color: Colors.black54,
+                      ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -130,7 +134,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your email';
                           }
-                          final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                          final emailRegExp =
+                              RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
                           if (!emailRegExp.hasMatch(value)) {
                             return 'Please enter a valid email';
                           }
@@ -180,20 +185,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         onPressed: _isLoading ? null : registerUser,
                         child: _isLoading
                             ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
                             : const Text(
-                          'REGISTER',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                                'REGISTER',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                       const SizedBox(height: 16),
 
@@ -208,7 +213,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           TextButton(
                             onPressed: () {
                               Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                MaterialPageRoute(
+                                    builder: (_) => const LoginScreen()),
                               );
                             },
                             child: const Text('Login'),

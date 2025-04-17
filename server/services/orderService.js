@@ -1,6 +1,6 @@
 // services/orderService.js
 const OrderModel = require("./../model/orderSchema");
-const UserModel = require("./../model/userSchema");
+// const UserModel = require("./../model/userSchema");
 
 // thêm đơn hàng
 const insertOrder = async (orderData) => {

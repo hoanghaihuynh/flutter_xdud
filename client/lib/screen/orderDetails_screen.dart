@@ -5,11 +5,12 @@ import 'package:http/http.dart' as http;
 import './../models/orders.dart';
 
 class OrderService {
-  // static const String _baseUrl = 'http://192.168.1.5:3000/';
+  // static const String _baseUrl = 'http://192.168.242.234:3000/';
 
   Future<List<Order>> getOrdersByUserId(String userId) async {
     final response = await http.get(
-      Uri.parse('http://192.168.1.5:3000/order/getAllOrder?user_id=$userId'),
+      Uri.parse(
+          'http://192.168.242.234:3000/order/getAllOrder?user_id=$userId'),
     );
 
     if (response.statusCode == 200) {

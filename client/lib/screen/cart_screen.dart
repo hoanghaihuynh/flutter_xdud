@@ -34,7 +34,7 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  // Lấy giỏ hàng theo user id
+  // Call api lấy giỏ hàng theo user id
   Future<void> _fetchCart() async {
     try {
       final userId = await _getUserId();
@@ -49,7 +49,7 @@ class _CartScreenState extends State<CartScreen> {
       }
 
       final url =
-          Uri.parse('http://192.168.1.5:3000/cart/getCartByUserId/$userId');
+          Uri.parse('http://192.168.242.234:3000/cart/getCartByUserId/$userId');
       final response = await http.get(url).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -111,7 +111,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  // xóa sản phẩm khỏi giỏ hàng
+  // Call api xóa sản phẩm khỏi giỏ hàng
   Future<void> _removeItem(String cartItemId, String productId) async {
     try {
       final userId = await _getUserId();
@@ -127,7 +127,7 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = true;
       });
 
-      final url = Uri.parse('http://192.168.1.5:3000/cart/removeProduct/');
+      final url = Uri.parse('http://192.168.242.234:3000/cart/removeProduct/');
       final response = await http.delete(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -177,7 +177,8 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = true;
       });
 
-      final url = Uri.parse('http://192.168.1.5:3000/cart/updateCartQuantity');
+      final url =
+          Uri.parse('http://192.168.242.234:3000/cart/updateCartQuantity');
       final response = await http.put(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -258,7 +259,7 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = true;
       });
 
-      final url = Uri.parse('http://192.168.1.5:3000/order/insertOrder');
+      final url = Uri.parse('http://192.168.242.234:3000/order/insertOrder');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -273,7 +274,7 @@ class _CartScreenState extends State<CartScreen> {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         _showSnackBar('ĐẶT HÀNG THÀNH CÔNG');
-        _fetchCart(); // Làm mới giỏ hàng
+        await _clearCart(); // gọi hàm này để xóa giỏ hàng
       } else {
         _showSnackBar('Failed to place order: ${responseData['message']}',
             isError: true);
@@ -283,6 +284,30 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = false;
       });
       _showSnackBar('Error placing order: $e', isError: true);
+    }
+  }
+
+  // Call api clear giỏ hàng
+  Future<void> _clearCart() async {
+    final userId = await _getUserId();
+    if (userId == null || userId.isEmpty) {
+      print('User ID not found for clearCart');
+      return;
+    }
+
+    final url = Uri.parse('http://192.168.242.234:3000/cart/clearCart');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'userId': userId}),
+    );
+
+    final responseData = json.decode(response.body);
+    if (response.statusCode == 200) {
+      print('Giỏ hàng đã được xóa thành công');
+      _fetchCart(); // refresh UI
+    } else {
+      print('Lỗi khi xóa giỏ hàng: ${responseData['message']}');
     }
   }
 
