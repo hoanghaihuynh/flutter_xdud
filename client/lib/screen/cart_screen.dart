@@ -300,9 +300,20 @@ class _CartScreenState extends State<CartScreen> {
         actions: [
           // Icon xem đơn hàng
           IconButton(
-            icon: const Icon(Icons.receipt_long), // Hoặc Icons.list_alt
-            onPressed: () {
-              // Navigator.push();
+            icon: const Icon(Icons.receipt_long),
+            onPressed: () async {
+              final userId = await _getUserId();
+              if (userId != null && userId.isNotEmpty) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OrderListScreen(userId: userId),
+                  ),
+                );
+              } else {
+                _showSnackBar('Vui lòng đăng nhập để xem đơn hàng',
+                    isError: true);
+              }
             },
             tooltip: 'Xem đơn hàng',
           ),
