@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CartService {
-  static const String _baseUrl = "http://192.168.242.234:3000";
+  static const String _baseUrl = "http://172.20.12.120:3000";
 
   static Future<String?> _getUserId() async {
     final prefs = await SharedPreferences.getInstance();

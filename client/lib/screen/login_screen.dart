@@ -46,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = true;
       });
 
-      const String loginUrl = "http://192.168.242.234:3000/login";
+      const String loginUrl = "http://172.20.12.120:3000/login";
 
       try {
         final response = await http.post(

@@ -44,7 +44,7 @@ class _ShopScreenState extends State<ShopScreen> {
   Future<void> fetchProducts() async {
     try {
       final response = await http
-          .get(Uri.parse('http://192.168.242.234:3000/products/getAll'));
+          .get(Uri.parse('http://172.20.12.120:3000/products/getAll'));
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         List<dynamic> productsJson = data['products'];
@@ -151,7 +151,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 Expanded(
                   child: GridView.builder(
                     shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
+                    physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(16),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(

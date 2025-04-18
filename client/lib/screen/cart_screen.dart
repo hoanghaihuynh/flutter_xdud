@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:myproject/screen/orderDetails_screen.dart';
 import 'package:myproject/models/carts.dart';
+import 'package:myproject/screen/shop_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
@@ -50,7 +51,7 @@ class _CartScreenState extends State<CartScreen> {
       }
 
       final url =
-          Uri.parse('http://192.168.242.234:3000/cart/getCartByUserId/$userId');
+          Uri.parse('http://172.20.12.120:3000/cart/getCartByUserId/$userId');
       final response = await http.get(url).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -134,7 +135,7 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = true;
       });
 
-      final url = Uri.parse('http://192.168.242.234:3000/cart/removeProduct/');
+      final url = Uri.parse('http://172.20.12.120:3000/cart/removeProduct/');
       final response = await http.delete(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -185,7 +186,7 @@ class _CartScreenState extends State<CartScreen> {
       });
 
       final url =
-          Uri.parse('http://192.168.242.234:3000/cart/updateCartQuantity');
+          Uri.parse('http://172.20.12.120:3000/cart/updateCartQuantity');
       final response = await http.put(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -266,7 +267,7 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = true;
       });
 
-      final url = Uri.parse('http://192.168.242.234:3000/order/insertOrder');
+      final url = Uri.parse('http://172.20.12.120:3000/order/insertOrder');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -302,7 +303,7 @@ class _CartScreenState extends State<CartScreen> {
       return;
     }
 
-    final url = Uri.parse('http://192.168.242.234:3000/cart/clearCart');
+    final url = Uri.parse('http://172.20.12.120:3000/cart/clearCart');
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -436,8 +437,8 @@ class _CartScreenState extends State<CartScreen> {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
-                // Navigate to products page
-                // Navigator.of(context).push(...);
+                Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ShopScreen()));
               },
               icon: const Icon(Icons.shopping_bag_outlined),
               label: const Text('Continue Shopping'),

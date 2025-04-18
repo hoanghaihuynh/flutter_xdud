@@ -37,7 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _isLoading = true;
     });
 
-    const String registration = "http://192.168.242.234:3000/registration";
+    const String registration = "http://172.20.12.120:3000/registration";
 
     try {
       final response = await http.post(

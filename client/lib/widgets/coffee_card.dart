@@ -18,7 +18,7 @@ class CoffeeCard extends StatelessWidget {
   // Hàm call API thêm sản phẩm vào giỏ hàng
   Future<void> addToCart(BuildContext context) async {
     const String apiUrl =
-        'http://192.168.242.234:3000/cart/insertCart'; // Thay bằng endpoint thực tế của bạn
+        'http://172.20.12.120:3000/cart/insertCart'; // Thay bằng endpoint thực tế của bạn
 
     try {
       final response = await http.post(
@@ -62,6 +62,10 @@ class CoffeeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Kích thước cố định cho tất cả hình ảnh
+    const double imageHeight = 120.0; // Chỉnh theo nhu cầu
+    const double imageWidth = double.infinity; // Chiều rộng bằng thẻ
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -77,53 +81,18 @@ class CoffeeCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Coffee Image
-          Expanded(
-            flex: 5,
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                  child: Container(
-                      width: double.infinity,
-                      color: Colors.grey[200],
-                      child: Image.network(
-                        coffee.imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(
-                            child: Icon(
-                              Icons.coffee,
-                              size: 60,
-                              color: Colors.grey[400],
-                            ),
-                          );
-                        },
-                      )),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.favorite_border,
-                      size: 18,
-                      color: Colors.red[400],
-                    ),
-                  ),
-                ),
-              ],
+          // Phần hình ảnh với kích thước cố định
+          Container(
+            height: imageHeight, // Chiều cao cố định
+            width: imageWidth, // Chiều rộng bằng thẻ
+            child: ClipRRect(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              child: _buildProductImage(),
             ),
           ),
 
-          // Coffee Details
+          // Phần thông tin sản phẩm (giữ nguyên)
           Expanded(
-            flex: 4,
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Column(
@@ -184,6 +153,39 @@ class CoffeeCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  // Widget hiển thị hình ảnh (tách riêng để dễ quản lý)
+  Widget _buildProductImage() {
+    return Image.network(
+      coffee.imageUrl,
+      fit: BoxFit.cover, // Đảm bảo hình cover toàn bộ khung
+      width: double.infinity,
+      height: double.infinity,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Center(
+          child: CircularProgressIndicator(
+            value: loadingProgress.expectedTotalBytes != null
+                ? loadingProgress.cumulativeBytesLoaded /
+                    loadingProgress.expectedTotalBytes!
+                : null,
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: Colors.grey[200],
+          child: Center(
+            child: Icon(
+              Icons.image_not_supported,
+              color: Colors.grey[400],
+              size: 50,
+            ),
+          ),
+        );
+      },
     );
   }
 }
