@@ -17,7 +17,7 @@ exports.getAllProduct = async (req, res, next) => {
   }
 };
 
-// Lấy sp theo ID
+// Lấy sản phẩm theo ID
 exports.getProductByID = async (req, res, next) => {
   try {
     const product = await ProductService.getProductByID(req.params.id);
@@ -69,21 +69,18 @@ exports.deleteProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Kiểm tra sản phẩm có tồn tại không
-    const product = await Product.findById(id);
-    if (!product) {
+    const deletedProduct = await ProductService.deleteProduct(id);
+
+    if (!deletedProduct) {
       return res
         .status(404)
         .json({ status: 404, error: "Không tìm thấy sản phẩm" });
     }
 
-    // Xóa sản phẩm
-    await Product.findByIdAndDelete(id);
-
     res.status(200).json({
       status: 200,
       success: "Xóa sản phẩm thành công",
-      deletedProduct: product,
+      deletedProduct,
     });
   } catch (error) {
     res
@@ -95,12 +92,10 @@ exports.deleteProduct = async (req, res, next) => {
 // Cập nhật sản phẩm
 exports.updateProduct = async (req, res) => {
   try {
-    const { id } = req.params; // Lấy id từ request params
-    const updatedData = req.body; // Dữ liệu cần cập nhật
+    const { id } = req.params;
+    const updatedData = req.body;
 
-    const updatedProduct = await Product.findByIdAndUpdate(id, updatedData, {
-      new: true,
-    });
+    const updatedProduct = await ProductService.updateProduct(id, updatedData);
 
     if (!updatedProduct) {
       return res

@@ -29,6 +29,36 @@ class ProductService {
       throw error;
     }
   }
+
+  // Xóa sản phẩm theo ID
+  static async deleteProduct(id) {
+    try {
+      const product = await ProductModel.findById(id);
+      if (!product) return null;
+
+      await ProductModel.findByIdAndDelete(id);
+      return product;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Cập nhật sản phẩm
+  static async updateProduct(id, updatedData) {
+    try {
+      const updatedProduct = await ProductModel.findByIdAndUpdate(
+        id,
+        updatedData,
+        {
+          new: true,
+        }
+      );
+
+      return updatedProduct;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 module.exports = ProductService;
