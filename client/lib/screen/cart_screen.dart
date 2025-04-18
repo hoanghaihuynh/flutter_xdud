@@ -4,8 +4,9 @@ import 'dart:convert';
 import 'package:myproject/screen/orderDetails_screen.dart';
 import 'package:myproject/models/carts.dart';
 import 'package:myproject/screen/shop_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
+import 'package:myproject/services/cart_service.dart';
+import 'package:myproject/utils/getUserId.dart';
+import 'package:myproject/utils/formatCurrency.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({Key? key}) : super(key: key);
@@ -25,83 +26,39 @@ class _CartScreenState extends State<CartScreen> {
     _fetchCart();
   }
 
-  // lấy user_id
-  Future<String?> _getUserId() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('userId');
-    } catch (e) {
-      print('Error getting userId: $e');
-      return null;
-    }
-  }
-
   // Call api lấy giỏ hàng theo user id
   Future<void> _fetchCart() async {
     try {
-      final userId = await _getUserId();
+      final userId = await getUserId();
       print('Fetched userId: $userId');
 
       if (userId == null || userId.isEmpty) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'User not logged in';
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'User not logged in';
+          });
+        }
         return;
       }
 
-      final url =
-          Uri.parse('http://172.20.12.120:3000/cart/getCartByUserId/$userId');
-      final response = await http.get(url).timeout(const Duration(seconds: 10));
+      final cartItems = await CartService.fetchCartByUserId(userId);
 
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-
-        // Check for null and response structure
-        if (responseData['data'] == null ||
-            responseData['data']['products'] == null) {
-          setState(() {
-            _isLoading = false;
-            _cartItems = [];
-          });
-          return;
-        }
-
-        final cartData = responseData['data']['products'] as List;
-
+      if (mounted) {
         setState(() {
-          _cartItems = cartData.map((item) {
-            try {
-              return CartItem.fromJson(item);
-            } catch (e) {
-              print('Error parsing item: $e');
-              // Return default CartItem if parsing fails
-              return CartItem(
-                id: item['_id'] ?? 'unknown',
-                productId: item['productId']['_id'] ?? 'unknown_product',
-                name: item['productId']['name'] ?? 'Unknown Product',
-                price: (item['price'] ?? 0).toDouble(),
-                quantity: item['quantity'] ?? 1,
-                imageUrl: item['productId']['imageUrl'] ??
-                    'https://via.placeholder.com/150',
-              );
-            }
-          }).toList();
+          _cartItems = cartItems;
           _isLoading = false;
           _errorMessage = null;
         });
-      } else {
+      }
+    } catch (e) {
+      print('Error fetching cart: $e');
+      if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Failed to load cart: ${response.statusCode}';
+          _errorMessage = 'Error loading cart: ${e.toString()}';
         });
       }
-    } catch (error) {
-      print('Error fetching cart: $error');
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Error loading cart: ${error.toString()}';
-      });
     }
   }
 
@@ -113,16 +70,10 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  // Format lại giá sản phẩm
-  String formatCurrency(double amount) {
-    final format = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
-    return format.format(amount);
-  }
-
   // Call api xóa sản phẩm khỏi giỏ hàng
   Future<void> _removeItem(String cartItemId, String productId) async {
     try {
-      final userId = await _getUserId();
+      final userId = await getUserId();
 
       print("userId: $userId, cartItemId: $cartItemId, productId: $productId");
 
@@ -135,25 +86,22 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = true;
       });
 
-      final url = Uri.parse('http://172.20.12.120:3000/cart/removeProduct/');
-      final response = await http.delete(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'userId': userId,
-          'cartItemId': cartItemId,
-          'productId': productId,
-        }),
+      final result = await CartService.removeItem(
+        userId: userId,
+        cartItemId: cartItemId,
+        productId: productId,
       );
 
       setState(() {
         _isLoading = false;
       });
 
-      final responseData = json.decode(response.body);
+      final responseData = result['body'];
+      final statusCode = result['statusCode'];
+
       print('Response from remove: $responseData');
 
-      if (response.statusCode == 200) {
+      if (statusCode == 200) {
         _showSnackBar(
           responseData['message'] ?? 'XÓA SẢN PHẨM KHỎI GIỎ HÀNG THÀNH CÔNG',
           isError: false,
@@ -178,34 +126,29 @@ class _CartScreenState extends State<CartScreen> {
     if (quantity < 1) return;
 
     try {
-      final userId = await _getUserId();
+      final userId = await getUserId();
       if (userId == null) return;
 
       setState(() {
         _isLoading = true;
       });
 
-      final url =
-          Uri.parse('http://172.20.12.120:3000/cart/updateCartQuantity');
-      final response = await http.put(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'userId': userId,
-          'productId': productId,
-          'newQuantity': quantity,
-        }),
+      final result = await CartService.updateQuantity(
+        userId: userId,
+        productId: productId,
+        newQuantity: quantity,
       );
-
-      final responseData = jsonDecode(response.body);
-
-      print('responseData: $responseData');
 
       setState(() {
         _isLoading = false;
       });
 
-      if (response.statusCode == 200) {
+      final responseData = result['body'];
+      final statusCode = result['statusCode'];
+
+      print('responseData: $responseData');
+
+      if (statusCode == 200) {
         _fetchCart(); // Refresh cart after update
       } else {
         _showSnackBar('Failed to update quantity', isError: true);
@@ -235,7 +178,7 @@ class _CartScreenState extends State<CartScreen> {
 
   // call api đặt hàng
   Future<void> _insertOrder() async {
-    final userId = await _getUserId();
+    final userId = await getUserId();
 
     if (userId == null || userId.isEmpty) {
       _showSnackBar('User not logged in', isError: true);
@@ -267,7 +210,7 @@ class _CartScreenState extends State<CartScreen> {
         _isLoading = true;
       });
 
-      final url = Uri.parse('http://172.20.12.120:3000/order/insertOrder');
+      final url = Uri.parse('http://192.168.1.5:3000/order/insertOrder');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -297,13 +240,13 @@ class _CartScreenState extends State<CartScreen> {
 
   // Call api clear giỏ hàng
   Future<void> _clearCart() async {
-    final userId = await _getUserId();
+    final userId = await getUserId();
     if (userId == null || userId.isEmpty) {
       print('User ID not found for clearCart');
       return;
     }
 
-    final url = Uri.parse('http://172.20.12.120:3000/cart/clearCart');
+    final url = Uri.parse('http://192.168.1.5:3000/cart/clearCart');
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -335,7 +278,7 @@ class _CartScreenState extends State<CartScreen> {
           IconButton(
             icon: const Icon(Icons.receipt_long),
             onPressed: () async {
-              final userId = await _getUserId();
+              final userId = await getUserId();
               if (userId != null && userId.isNotEmpty) {
                 Navigator.push(
                   context,

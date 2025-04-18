@@ -1,10 +1,11 @@
-import 'dart:convert';
+// import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+// import 'package:http/http.dart' as http;
 import 'package:myproject/landing_page.dart';
 import 'package:myproject/screen/register_screen.dart';
+import 'package:myproject/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:jwt_decoder/jwt_decoder.dart';
+// import 'package:jwt_decoder/jwt_decoder.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -46,69 +47,48 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = true;
       });
 
-      const String loginUrl = "http://172.20.12.120:3000/login";
-
       try {
-        final response = await http.post(
-          Uri.parse(loginUrl),
-          headers: {"Content-Type": "application/json"},
-          body: jsonEncode({
-            "email": _emailController.text,
-            "password": _passwordController.text
-          }),
+        final result = await AuthService.loginUser(
+          _emailController.text,
+          _passwordController.text,
         );
 
         setState(() {
           _isLoading = false;
         });
 
-        final responseData = jsonDecode(response.body);
-
-        if (responseData['status'] == 200) {
+        if (result['success']) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(responseData['message']),
-                backgroundColor: Colors.green,
-              ),
+                  content: Text(result['message']),
+                  backgroundColor: Colors.green),
             );
           }
 
-          var myToken = responseData['token'];
-          prefs.setString('token', myToken);
-
-          // Giải mã token để lấy userId
-          Map<String, dynamic> jwtDecodedToken = JwtDecoder.decode(myToken);
-          String userId = jwtDecodedToken['_id']; // Lấy giá trị userId từ token
-          print('hello $userId'); // Thành công
-
-          // Lưu userId vào SharedPreferences
-          prefs.setString('userId', userId);
-
-          // Chuyển đến LandingPage
           Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => LandingPage(token: myToken)));
+            MaterialPageRoute(
+              builder: (_) => LandingPage(token: result['token']),
+            ),
+          );
         } else {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(responseData['error'] ?? 'Đăng Nhập Thất Bại!'),
-                backgroundColor: Colors.red,
-              ),
+                  content: Text(result['message']),
+                  backgroundColor: Colors.red),
             );
           }
         }
-      } catch (error) {
+      } catch (e) {
         setState(() {
           _isLoading = false;
         });
-
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Lỗi kết nối đến server!'),
-              backgroundColor: Colors.red,
-            ),
+                content: Text('Lỗi kết nối đến server!'),
+                backgroundColor: Colors.red),
           );
         }
       }

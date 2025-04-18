@@ -30,7 +30,7 @@ class _ProductDetailState extends State<ProductDetail> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://172.20.12.120:3000/cart/insertCart'),
+        Uri.parse('http://192.168.1.5:3000/cart/insertCart'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'userId': widget.userId,

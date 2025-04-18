@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:myproject/screen/login_screen.dart';
+import 'package:myproject/services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -37,44 +38,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _isLoading = true;
     });
 
-    const String registration = "http://172.20.12.120:3000/registration";
-
-    try {
-      final response = await http.post(
-        Uri.parse(registration),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "email": _emailController.text,
-          "password": _passwordController.text
-        }),
-      );
-
-      final responseData = jsonDecode(response.body);
-      print(responseData['response']);
-      if (response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text("Đăng ký thành công!"),
-              backgroundColor: Colors.green),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(responseData["message"] ?? "Lỗi đăng ký!"),
-              backgroundColor: Colors.red),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text("Lỗi kết nối đến server!"),
-            backgroundColor: Colors.red),
-      );
-    }
+    final result = await AuthService.registerUser(
+      _emailController.text,
+      _passwordController.text,
+    );
 
     setState(() {
       _isLoading = false;
     });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result['message']),
+        backgroundColor: result['success'] ? Colors.green : Colors.red,
+      ),
+    );
+
+    if (result['success']) {
+      // Optionally chuyển sang màn login
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
   }
 
   @override

@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
+import 'package:myproject/utils/formatCurrency.dart';
 import './../models/orders.dart';
 
 class OrderService {
-  // static const String _baseUrl = 'http://172.20.12.120:3000/';
+  // static const String _baseUrl = 'http://192.168.1.5:3000/';
 
   Future<List<Order>> getOrdersByUserId(String userId) async {
     final response = await http.get(
-      Uri.parse('http://172.20.12.120:3000/order/getAllOrder?user_id=$userId'),
+      Uri.parse('http://192.168.1.5:3000/order/getAllOrder?user_id=$userId'),
     );
 
     if (response.statusCode == 200) {
@@ -128,8 +129,7 @@ class OrderCard extends StatelessWidget {
                       Text('${item.quantity}x '),
                       Expanded(child: Text(item.product.name)),
                       Text(
-                        NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
-                            .format(item.price),
+                        formatCurrency(item.price),
                       ),
                     ],
                   ),
@@ -143,8 +143,7 @@ class OrderCard extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  NumberFormat.currency(locale: 'vi_VN', symbol: '₫')
-                      .format(order.total),
+                  formatCurrency(order.total),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
