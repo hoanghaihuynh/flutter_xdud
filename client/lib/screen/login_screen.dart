@@ -1,11 +1,8 @@
-// import 'dart:convert';
 import 'package:flutter/material.dart';
-// import 'package:http/http.dart' as http;
-import 'package:myproject/landing_page.dart';
-import 'package:myproject/screen/register_screen.dart';
-import 'package:myproject/services/auth_service.dart';
+import './../landing_page.dart';
+import './register_screen.dart';
+import './../services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// import 'package:jwt_decoder/jwt_decoder.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);

@@ -1,14 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:myproject/config/config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 
 class AuthService {
-  static const String _baseUrl = "http://192.168.1.5:3000";
-
   static Future<Map<String, dynamic>> registerUser(
       String email, String password) async {
-    final registerUrl = Uri.parse("$_baseUrl/registration");
+    final registerUrl = Uri.parse(AppConfig.getApiUrl('/registration'));
 
     try {
       final response = await http.post(
@@ -40,7 +39,7 @@ class AuthService {
 
   static Future<Map<String, dynamic>> loginUser(
       String email, String password) async {
-    final loginUrl = Uri.parse("$_baseUrl/login");
+    final loginUrl = Uri.parse(AppConfig.getApiUrl('/login'));
 
     final response = await http.post(
       loginUrl,

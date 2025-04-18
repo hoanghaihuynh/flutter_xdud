@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:myproject/screen/orderDetails_screen.dart';
-import 'package:myproject/models/carts.dart';
-import 'package:myproject/screen/shop_screen.dart';
-import 'package:myproject/services/cart_service.dart';
-import 'package:myproject/utils/getUserId.dart';
-import 'package:myproject/utils/formatCurrency.dart';
+import './orderDetails_screen.dart';
+import './../models/carts.dart';
+import './shop_screen.dart';
+import './../services/cart_service.dart';
+import './../utils/getUserId.dart';
+import './../utils/formatCurrency.dart';
+import './../config/config.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({Key? key}) : super(key: key);
@@ -209,8 +210,8 @@ class _CartScreenState extends State<CartScreen> {
       setState(() {
         _isLoading = true;
       });
+      final url = Uri.parse(AppConfig.getApiUrl('/order/insertOrder'));
 
-      final url = Uri.parse('http://192.168.1.5:3000/order/insertOrder');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -224,7 +225,7 @@ class _CartScreenState extends State<CartScreen> {
       final responseData = json.decode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        _showSnackBar('ĐẶT HÀNG THÀNH CÔNG');
+        _showSnackBar('ORDERED SUCCESSFULLY');
         await _clearCart(); // gọi hàm này để xóa giỏ hàng
       } else {
         _showSnackBar('Failed to place order: ${responseData['message']}',
@@ -246,7 +247,8 @@ class _CartScreenState extends State<CartScreen> {
       return;
     }
 
-    final url = Uri.parse('http://192.168.1.5:3000/cart/clearCart');
+    final url = Uri.parse(AppConfig.getApiUrl('/cart/clearCart'));
+
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -380,8 +382,7 @@ class _CartScreenState extends State<CartScreen> {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ShopScreen()));
+                Navigator.pop(context);
               },
               icon: const Icon(Icons.shopping_bag_outlined),
               label: const Text('Continue Shopping'),

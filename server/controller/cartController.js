@@ -31,7 +31,9 @@ exports.insertCart = async (req, res) => {
   try {
     const { userId, productId, quantity } = req.body;
     const cart = await cartService.insertToCart(userId, productId, quantity);
-    res.status(201).json({ status: 201, success: "OK", data: cart });
+    res
+      .status(201)
+      .json({ status: 201, success: "PRODUCT ADDED SUCCESSFULLY", data: cart });
   } catch (error) {
     res.status(500).json({ status: 500, error: error.message });
   }
@@ -42,7 +44,9 @@ exports.removeProductFromCart = async (req, res) => {
   try {
     const { userId, productId } = req.body;
     const cart = await cartService.removeProduct(userId, productId);
-    res.status(200).json({ status: 200, success: "OK", data: cart });
+    res
+      .status(200)
+      .json({ status: 200, success: "REMOVE ITEMS SUCCESSFULLY", data: cart });
   } catch (error) {
     res.status(500).json({ status: 500, error: error.message });
   }
@@ -57,7 +61,9 @@ exports.updateCartQuantity = async (req, res) => {
       productId,
       newQuantity
     );
-    res.status(200).json({ status: 200, success: "OK", data: result });
+    res
+      .status(200)
+      .json({ status: 200, success: "UPDATED SUCCESSFULLY", data: result });
   } catch (error) {
     res.status(500).json({ status: 500, error: error.message });
   }

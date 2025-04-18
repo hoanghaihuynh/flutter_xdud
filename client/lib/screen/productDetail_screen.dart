@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:myproject/models/products.dart';
+import './../models/products.dart';
+import './../config/config.dart';
 
 class ProductDetail extends StatefulWidget {
   final Products product;
@@ -29,7 +30,7 @@ class _ProductDetailState extends State<ProductDetail> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.5:3000/cart/insertCart'),
+        Uri.parse(AppConfig.getApiUrl('/cart/insertCart')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'userId': widget.userId,
@@ -41,7 +42,7 @@ class _ProductDetailState extends State<ProductDetail> {
       if (response.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('ĐÃ THÊM VÀO GIỎ HÀNG'),
+            content: Text('PRODUCT ADDED SUCCESSFULLY'),
             backgroundColor: Colors.green,
           ),
         );

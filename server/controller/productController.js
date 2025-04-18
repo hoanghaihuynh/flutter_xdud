@@ -54,7 +54,7 @@ exports.insertProduct = async (req, res, next) => {
 
     res.status(201).json({
       status: 201,
-      success: "Thêm sản phẩm THÀNH CÔNG",
+      success: "PRODUCT ADDED SUCCESSFULLY",
       data: newProduct,
     });
   } catch (error) {

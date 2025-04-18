@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:myproject/models/products.dart';
-import 'package:myproject/screen/productDetail_screen.dart';
-import 'package:myproject/widgets/coffee_card.dart';
-import 'package:myproject/screen/cart_screen.dart';
+import './../models/products.dart';
+import './productDetail_screen.dart';
+import './../services/product_service.dart';
+import './../widgets/coffee_card.dart';
+import './cart_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ShopScreen extends StatefulWidget {
@@ -19,7 +18,8 @@ class _ShopScreenState extends State<ShopScreen> {
   List<Products> filteredItems = [];
   List<Products> allProducts = [];
   bool isLoading = true;
-  String? userId; // Thêm biến lưu trữ userId
+  String? userId;
+  final ProductService _productService = ProductService();
 
   @override
   void initState() {
@@ -42,26 +42,18 @@ class _ShopScreenState extends State<ShopScreen> {
 
   Future<void> fetchProducts() async {
     try {
-      final response =
-          await http.get(Uri.parse('http://192.168.1.5:3000/products/getAll'));
-      if (response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        List<dynamic> productsJson = data['products'];
-
-        setState(() {
-          allProducts =
-              productsJson.map((json) => Products.fromJson(json)).toList();
-          filteredItems = List.from(allProducts);
-          isLoading = false;
-        });
-      } else {
-        throw Exception("Failed to load products");
-      }
+      final products = await _productService.fetchAllProducts();
+      setState(() {
+        allProducts = products;
+        filteredItems = List.from(allProducts);
+        isLoading = false;
+      });
     } catch (error) {
-      print("Error fetching products: $error");
+      print("Error loading products: $error");
       setState(() {
         isLoading = false;
       });
+      // Có thể thêm hiển thị thông báo lỗi cho người dùng ở đây
     }
   }
 

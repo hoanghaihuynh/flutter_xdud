@@ -26,8 +26,8 @@ class CoffeeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Kích thước cố định cho tất cả hình ảnh
-    const double imageHeight = 120.0; // Chỉnh theo nhu cầu
-    const double imageWidth = double.infinity; // Chiều rộng bằng thẻ
+    const double imageHeight = 120.0; 
+    const double imageWidth = double.infinity;
 
     return Container(
       decoration: BoxDecoration(

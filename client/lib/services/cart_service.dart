@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:myproject/models/carts.dart';
+import './../models/carts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import './../config/config.dart';
 
 class CartService {
-  static const String _baseUrl = 'http://192.168.1.5:3000/cart';
-
   // Call api thêm vào giỏ hàng
   static Future<void> addToCart({
     required String userId,
@@ -14,7 +13,7 @@ class CartService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/insertCart'),
+        Uri.parse(AppConfig.getApiUrl('/cart/insertCart')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(
             {"userId": userId, "productId": productId, "quantity": 1}),
@@ -50,7 +49,7 @@ class CartService {
 
   // Call api fetch giỏ hàng theo user id
   static Future<List<CartItem>> fetchCartByUserId(String userId) async {
-    final url = Uri.parse('$_baseUrl/getCartByUserId/$userId');
+    final url = Uri.parse(AppConfig.getApiUrl('/cart/getCartByUserId/$userId'));
     final response = await http.get(url).timeout(const Duration(seconds: 10));
 
     if (response.statusCode == 200) {
@@ -90,7 +89,7 @@ class CartService {
     required String cartItemId,
     required String productId,
   }) async {
-    final url = Uri.parse('$_baseUrl/removeProduct/');
+    final url = Uri.parse(AppConfig.getApiUrl('/cart/removeProduct'));
     final response = await http.delete(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -114,7 +113,7 @@ class CartService {
     required String productId,
     required int newQuantity,
   }) async {
-    final url = Uri.parse('$_baseUrl/updateCartQuantity');
+    final url = Uri.parse(AppConfig.getApiUrl('/cart/updateCartQuantity'));
     final response = await http.put(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -131,5 +130,4 @@ class CartService {
       'body': responseData,
     };
   }
-  
 }
