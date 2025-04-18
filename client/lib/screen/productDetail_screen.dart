@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:myproject/models/products.dart';
-import 'package:myproject/utils/constants.dart';
 
 class ProductDetail extends StatefulWidget {
   final Products product;

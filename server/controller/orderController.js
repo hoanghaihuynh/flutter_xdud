@@ -1,5 +1,3 @@
-// controllers/orderController.js
-const Order = require("./../model/orderSchema");
 const orderService = require("./../services/orderService");
 
 // Thêm đơn hàng
@@ -46,4 +44,30 @@ exports.getAllOrder = async (req, res) => {
   }
 };
 
+// Cập nhật đơn hàng
+exports.updateOrder = async (req, res) => {
+  try {
+    const { orderId, updateData } = req.body;
 
+    if (!orderId || !updateData) {
+      return res.status(400).json({
+        status: 400,
+        error: "Thiếu orderId hoặc dữ liệu cập nhật",
+      });
+    }
+
+    const updatedOrder = await orderService.updateOrder(orderId, updateData);
+
+    res.status(200).json({
+      status: 200,
+      message: "Cập nhật đơn hàng thành công",
+      data: updatedOrder,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 500,
+      error: "Có lỗi khi cập nhật đơn hàng",
+      message: error.message,
+    });
+  }
+};

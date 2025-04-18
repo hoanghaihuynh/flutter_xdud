@@ -12,7 +12,9 @@ exports.getAllUser = async (req, res) => {
       data: users,
     });
   } catch (error) {
-    res.status(500).json({ status: 500, error: "Lỗi server", message: error.message });
+    res
+      .status(500)
+      .json({ status: 500, error: "Lỗi server", message: error.message });
   }
 };
 
@@ -23,7 +25,9 @@ exports.getUserById = async (req, res) => {
     const user = await User.findById(id); // Tìm user theo ID
 
     if (!user) {
-      return res.status(404).json({ status: 404, error: "Không tìm thấy người dùng" });
+      return res
+        .status(404)
+        .json({ status: 404, error: "Không tìm thấy người dùng" });
     }
 
     res.status(200).json({
@@ -32,7 +36,9 @@ exports.getUserById = async (req, res) => {
       data: user,
     });
   } catch (error) {
-    res.status(500).json({ status: 500, error: "Lỗi server", message: error.message });
+    res
+      .status(500)
+      .json({ status: 500, error: "Lỗi server", message: error.message });
   }
 };
 
@@ -71,11 +77,11 @@ exports.login = async (req, res, next) => {
 
     res.status(200).json({
       success: "User Login Successfully",
-      message: "ĐĂNG NHẬP THÀNH CÔNG",
+      message: "LOGIN SUCCESSFULLY",
       status: 200,
       token: token,
     });
   } catch (error) {
-    res.status(400).json({ success: false, error: "ĐĂNG NHẬP KHÔNG THÀNH CÔNG" });
+    res.status(400).json({ success: false, error: "LOGIN FAILED" });
   }
 };

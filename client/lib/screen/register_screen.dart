@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:myproject/screen/login_screen.dart';
 import 'package:myproject/services/auth_service.dart';
 
@@ -18,7 +16,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   // final _confirmPasswordController = TextEditingController();
   bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
+  // bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
   bool isNotValidate = false;
 

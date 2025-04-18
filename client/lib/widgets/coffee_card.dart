@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:myproject/models/products.dart';
 import 'package:myproject/services/cart_service.dart';
 import 'package:myproject/utils/constants.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:intl/intl.dart';
 import 'package:myproject/utils/formatCurrency.dart';
 
 class CoffeeCard extends StatelessWidget {

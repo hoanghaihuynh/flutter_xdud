@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:myproject/screen/login_screen.dart';
-import 'package:myproject/screen/register_screen.dart';
-import 'package:myproject/screen/shop_screen.dart';
-import 'package:myproject/screen/cart_screen.dart';
 
 void main() {
   runApp(MyApp());

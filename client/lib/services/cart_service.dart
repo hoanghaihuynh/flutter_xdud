@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myproject/models/carts.dart';
-// import 'package:myproject/models/products.dart';
-// import 'package:myproject/utils/constants.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:myproject/utils/getUserId.dart';
-// import 'package:intl/intl.dart';
 
 class CartService {
   static const String _baseUrl = 'http://192.168.1.5:3000/cart';

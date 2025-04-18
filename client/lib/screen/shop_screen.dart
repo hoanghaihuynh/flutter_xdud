@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:myproject/models/products.dart';
 import 'package:myproject/screen/productDetail_screen.dart';
-import 'package:myproject/utils/constants.dart';
 import 'package:myproject/widgets/coffee_card.dart';
 import 'package:myproject/screen/cart_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';

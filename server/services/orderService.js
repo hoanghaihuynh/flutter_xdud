@@ -35,6 +35,22 @@ class OrderService {
       throw new Error("Failed to get orders by user ID: " + error.message);
     }
   }
+
+  // Sửa đơn hàng
+  static async updateOrder(orderId, updateData) {
+    try {
+      const updatedOrder = await OrderModel.findByIdAndUpdate(
+        orderId,
+        updateData,
+        {
+          new: true,
+        }
+      );
+      return updatedOrder;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 module.exports = OrderService;

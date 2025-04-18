@@ -140,19 +140,18 @@ class _LandingPageState extends State<LandingPage> {
                                 final confirm = await showDialog(
                                   context: context,
                                   builder: (context) => AlertDialog(
-                                    title: Text("Đăng xuất"),
-                                    content: Text(
-                                        "Bạn có chắc chắn muốn đăng xuất?"),
+                                    title: Text("Logout"),
+                                    content: Text("Are you sure about that?"),
                                     actions: [
                                       TextButton(
                                         onPressed: () =>
                                             Navigator.pop(context, false),
-                                        child: Text("Hủy"),
+                                        child: Text("Cancel"),
                                       ),
                                       TextButton(
                                         onPressed: () =>
                                             Navigator.pop(context, true),
-                                        child: Text("Đăng xuất",
+                                        child: Text("Logout",
                                             style:
                                                 TextStyle(color: Colors.red)),
                                       ),
