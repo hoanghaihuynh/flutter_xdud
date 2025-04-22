@@ -1,6 +1,6 @@
 class CartItem {
-  final String id; // ID của cart item (67e2e4ca0f56bc50c30f442f)
-  final String productId; // ID thực của sản phẩm (67e2da3bb98bfed78d22ec1d)
+  final String id; 
+  final String productId; 
   final String name;
   final double price;
   final int quantity;
@@ -18,7 +18,7 @@ class CartItem {
   factory CartItem.fromJson(Map<String, dynamic> json) {
     return CartItem(
       id: json['_id'],
-      productId: json['productId']['_id'], // Lấy ID sản phẩm thực
+      productId: json['productId']['_id'], 
       name: json['productId']['name'],
       price: (json['price'] ?? 0).toDouble(),
       quantity: json['quantity'] ?? 1,

@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import './orderDetails_screen.dart';
 import './../models/carts.dart';
-import './shop_screen.dart';
 import './../services/cart_service.dart';
 import './../utils/getUserId.dart';
 import './../utils/formatCurrency.dart';

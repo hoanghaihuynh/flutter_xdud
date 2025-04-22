@@ -18,11 +18,10 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isPasswordVisible = false;
   bool _rememberMe = false;
   bool _isLoading = false;
-  late SharedPreferences prefs; // Dùng để lưu token
+  late SharedPreferences prefs; 
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     initSharedPrefs();
   }

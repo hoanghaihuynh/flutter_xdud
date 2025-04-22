@@ -25,7 +25,7 @@ class Products {
       description: json['description'],
       category: json['category'],
       stock: json['stock'],
-      imageUrl: json['imageUrl'] ?? "https://via.placeholder.com/150", // Giá trị mặc định nếu thiếu ảnh
+      imageUrl: json['imageUrl'] ?? "https://via.placeholder.com/150", 
     );
   }
 }

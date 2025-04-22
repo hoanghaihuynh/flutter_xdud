@@ -179,7 +179,7 @@ class _ProductDetailState extends State<ProductDetail> {
                       ),
                       const SizedBox(width: 16),
                       SizedBox(
-                        width: 80, // Độ rộng cố định cho TextField
+                        width: 80, 
                         child: TextField(
                           controller:
                               TextEditingController(text: quantity.toString()),
@@ -190,12 +190,12 @@ class _ProductDetailState extends State<ProductDetail> {
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(
                                   color: Colors
-                                      .grey), // Viền màu xám khi không focus
+                                      .grey), 
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                               borderSide: BorderSide(
-                                  color: Colors.grey), // Viền màu xám khi focus
+                                  color: Colors.grey), 
                             ),
                             contentPadding:
                                 const EdgeInsets.symmetric(vertical: 8),

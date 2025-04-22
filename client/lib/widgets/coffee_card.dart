@@ -6,12 +6,12 @@ import 'package:myproject/utils/formatCurrency.dart';
 
 class CoffeeCard extends StatelessWidget {
   final Products coffee;
-  final String userId; // Thêm userId để sử dụng trong API
+  final String userId;
 
   const CoffeeCard({
     Key? key,
     required this.coffee,
-    required this.userId, // Thêm userId vào constructor
+    required this.userId, 
   }) : super(key: key);
 
   // Hàm call API thêm sản phẩm vào giỏ hàng
@@ -25,7 +25,7 @@ class CoffeeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Kích thước cố định cho tất cả hình ảnh
+    // Kích thước cố định cho hình ảnh
     const double imageHeight = 120.0; 
     const double imageWidth = double.infinity;
 
@@ -46,15 +46,15 @@ class CoffeeCard extends StatelessWidget {
         children: [
           // Phần hình ảnh với kích thước cố định
           Container(
-            height: imageHeight, // Chiều cao cố định
-            width: imageWidth, // Chiều rộng bằng thẻ
+            height: imageHeight, 
+            width: imageWidth, 
             child: ClipRRect(
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               child: _buildProductImage(),
             ),
           ),
 
-          // Phần thông tin sản phẩm (giữ nguyên)
+          // Phần thông tin sản phẩm 
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(12.0),
@@ -119,11 +119,10 @@ class CoffeeCard extends StatelessWidget {
     );
   }
 
-  // Widget hiển thị hình ảnh (tách riêng để dễ quản lý)
   Widget _buildProductImage() {
     return Image.network(
       coffee.imageUrl,
-      fit: BoxFit.cover, // Đảm bảo hình cover toàn bộ khung
+      fit: BoxFit.cover, 
       width: double.infinity,
       height: double.infinity,
       loadingBuilder: (context, child, loadingProgress) {

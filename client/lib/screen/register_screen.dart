@@ -11,21 +11,16 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  // final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  // final _confirmPasswordController = TextEditingController();
   bool _isPasswordVisible = false;
-  // bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
   bool isNotValidate = false;
 
   @override
   void dispose() {
-    // _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    // _confirmPasswordController.dispose();
     super.dispose();
   }
 

@@ -20,6 +20,7 @@ class _ShopScreenState extends State<ShopScreen> {
   bool isLoading = true;
   String? userId;
   final ProductService _productService = ProductService();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -53,7 +54,6 @@ class _ShopScreenState extends State<ShopScreen> {
       setState(() {
         isLoading = false;
       });
-      // Có thể thêm hiển thị thông báo lỗi cho người dùng ở đây
     }
   }
 
@@ -63,6 +63,27 @@ class _ShopScreenState extends State<ShopScreen> {
       filteredItems = category == 'All'
           ? List.from(allProducts)
           : allProducts.where((item) => item.category == category).toList();
+    });
+  }
+
+  // Chức năng tìm kiếm sản phẩm
+  void _searchProducts(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        filteredItems = selectedCategory == 'All'
+            ? List.from(allProducts)
+            : allProducts
+                .where((item) => item.category == selectedCategory)
+                .toList();
+      } else {
+        filteredItems = allProducts.where((product) {
+          final name = product.name.toLowerCase();
+          final searchLower = query.toLowerCase();
+          final categoryMatch =
+              selectedCategory == 'All' || product.category == selectedCategory;
+          return name.contains(searchLower) && categoryMatch;
+        }).toList();
+      }
     });
   }
 
@@ -92,6 +113,8 @@ class _ShopScreenState extends State<ShopScreen> {
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: TextField(
+                    controller: _searchController,
+                    onChanged: _searchProducts,
                     decoration: InputDecoration(
                       hintText: 'Search products...',
                       prefixIcon: const Icon(Icons.search),

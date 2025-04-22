@@ -21,7 +21,7 @@ class _LandingPageState extends State<LandingPage> {
     super.initState();
     try {
       Map<String, dynamic> jwtDecodedToken = JwtDecoder.decode(widget.token);
-      print('Decoded Token: $jwtDecodedToken'); // Debug xem có email không
+      print('Decoded Token: $jwtDecodedToken');
       email = jwtDecodedToken.containsKey('_email')
           ? jwtDecodedToken['_email'].toString()
           : 'Unknown';
@@ -72,7 +72,6 @@ class _LandingPageState extends State<LandingPage> {
                     SizedBox(height: 60),
 
                     // Email Card
-                    // Email Card với nút đăng xuất
                     Container(
                       width: double.infinity,
                       margin: EdgeInsets.only(right: 60),
