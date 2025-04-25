@@ -20,7 +20,7 @@ class VNPayService {
       vnp_Command: "pay",
       vnp_CreateDate: createDate,
       vnp_CurrCode: "VND",
-      vnp_IpAddr: "192.168.1.5", // IP của khách hàng, cần lấy từ request
+      vnp_IpAddr: "192.168.1.5", 
       vnp_Locale: "vn",
       vnp_OrderInfo: orderInfo || `Thanh toan don hang ${orderId}`,
       vnp_OrderType: "other",
