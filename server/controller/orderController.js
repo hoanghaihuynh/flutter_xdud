@@ -1,14 +1,27 @@
 const orderService = require("./../services/orderService");
+const VNPayService = require("./../services/vnpayService");
 
 // Thêm đơn hàng
 exports.insertOrder = async (req, res) => {
   try {
     const orderData = req.body;
     const newOrder = await orderService.insertOrder(orderData);
+    
+    // Tạo URL thanh toán VNPay
+    const paymentUrl = VNPayService.createPaymentUrl(
+      newOrder._id,
+      newOrder.total,
+      null,
+      `Thanh toán đơn hàng #${newOrder._id}`
+    );
+
     res.status(200).json({
       status: 200,
       success: "Tạo order thành công",
-      data: newOrder,
+      data: {
+        order: newOrder,
+        paymentUrl: paymentUrl, // Trả về URL thanh toán cho client
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -69,5 +82,48 @@ exports.updateOrder = async (req, res) => {
       error: "Có lỗi khi cập nhật đơn hàng",
       message: error.message,
     });
+  }
+};
+
+// Xử lý return URL từ VNPay
+exports.vnpayReturn = async (req, res) => {
+  try {
+    const query = req.query;
+    const result = VNPayService.verifyReturn(query);
+
+    if (!result.isValid) {
+      return res.redirect("/payment/failed?message=Invalid signature");
+    }
+
+    const orderId = result.vnp_TxnRef;
+    const responseCode = result.vnp_ResponseCode;
+
+    // Cập nhật trạng thái đơn hàng
+    let updateData = {};
+    if (responseCode === "00") {
+      updateData.status = "paid";
+      // Có thể thêm các thông tin thanh toán khác vào đơn hàng
+      updateData.paymentInfo = {
+        method: "VNPay",
+        transactionId: result.vnp_TransactionNo,
+        bankCode: result.vnp_BankCode,
+        payDate: result.vnp_PayDate,
+      };
+    } else {
+      updateData.status = "payment_failed";
+    }
+
+    await orderService.updateOrder(orderId, updateData);
+
+    if (responseCode === "00") {
+      // Thanh toán thành công
+      return res.redirect("/payment/success");
+    } else {
+      // Thanh toán thất bại
+      return res.redirect(`/payment/failed?code=${responseCode}`);
+    }
+  } catch (error) {
+    console.error("VNPay return error:", error);
+    return res.redirect("/payment/failed?message=Internal error");
   }
 };
