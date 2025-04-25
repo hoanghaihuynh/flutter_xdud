@@ -22,6 +22,7 @@ const orderSchema = new Schema({
   ],
   total: { type: Number, required: true },
   status: { type: String, default: "pending" },
+  payment_method: { type: String },
   paymentInfo: {
     method: { type: String },
     transactionId: { type: String },

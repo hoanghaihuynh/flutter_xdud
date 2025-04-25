@@ -6,7 +6,11 @@ exports.insertOrder = async (req, res) => {
   try {
     const orderData = req.body;
     const newOrder = await orderService.insertOrder(orderData);
-    
+
+    if (!orderData.payment_method) {
+      return res.status(400).json({ error: "Thiếu phương thức thanh toán" });
+    }
+
     // Tạo URL thanh toán VNPay
     const paymentUrl = VNPayService.createPaymentUrl(
       newOrder._id,
