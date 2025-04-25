@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import './orderDetails_screen.dart';
 import './../models/carts.dart';
@@ -7,6 +8,7 @@ import './../services/cart_service.dart';
 import './../utils/getUserId.dart';
 import './../utils/formatCurrency.dart';
 import './../config/config.dart';
+import './../widgets/paymentMethod_card.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({Key? key}) : super(key: key);
@@ -19,6 +21,7 @@ class _CartScreenState extends State<CartScreen> {
   List<CartItem> _cartItems = [];
   bool _isLoading = true;
   String? _errorMessage;
+  bool _isProcessingPayment = false;
 
   @override
   void initState() {
@@ -261,6 +264,132 @@ class _CartScreenState extends State<CartScreen> {
     } else {
       print('Lỗi khi xóa giỏ hàng: ${responseData['message']}');
     }
+  }
+
+  // Xử lý thanh toán
+  Future<void> _processVNPayPayment() async {
+    try {
+      setState(() => _isProcessingPayment = true);
+
+      final userId = await getUserId();
+      if (userId == null || userId.isEmpty) {
+        _showSnackBar('Please login to continue', isError: true);
+        return;
+      }
+
+      // Chuẩn bị dữ liệu đơn hàng
+      final productList = _cartItems
+          .map((item) => {
+                "product_id": item.productId,
+                "quantity": item.quantity,
+                "price": item.price
+              })
+          .toList();
+
+      final orderData = {
+        "user_id": userId,
+        "products": productList,
+        "total": totalPrice,
+        "payment_method": "VNPAY",
+        "status": "pending"
+      };
+
+      // Gọi API tạo đơn hàng
+      final url = Uri.parse(AppConfig.getApiUrl('/order/insertOrder'));
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(orderData),
+      );
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Lấy paymentUrl từ response
+        final paymentUrl = responseData['data']['paymentUrl'];
+        // print("payment: $paymentUrl");
+
+        // Mở trình duyệt để thanh toán
+        if (await canLaunch(paymentUrl)) {
+          await launch(paymentUrl);
+          _showSnackBar('Redirecting to VNPAY...');
+          await _clearCart();
+          Navigator.pop(context); // Đóng modal sau khi chuyển hướng
+        } else {
+          throw 'Could not launch payment URL';
+        }
+      } else {
+        throw responseData['message'] ?? 'Failed to create payment';
+      }
+    } catch (e) {
+      _showSnackBar('Error: $e', isError: true);
+    } finally {
+      setState(() => _isProcessingPayment = false);
+    }
+  }
+
+  Future<void> _processCashPayment() async {
+    try {
+      setState(() => _isProcessingPayment = true);
+
+      final userId = await getUserId();
+      if (userId == null || userId.isEmpty) {
+        _showSnackBar('Please login to continue', isError: true);
+        return;
+      }
+
+      final productList = _cartItems
+          .map((item) => {
+                "product_id": item.productId,
+                "quantity": item.quantity,
+                "price": item.price
+              })
+          .toList();
+
+      final orderData = {
+        "user_id": userId,
+        "products": productList,
+        "total": totalPrice,
+        "payment_method": "CASH",
+        "status": "pending"
+      };
+
+      final url = Uri.parse(AppConfig.getApiUrl('/order/insertOrder'));
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(orderData),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _showSnackBar('Order created successfully. Please pay on delivery');
+        await _clearCart();
+        Navigator.pop(context); // Đóng modal
+      } else {
+        throw 'Failed to create order';
+      }
+    } catch (e) {
+      _showSnackBar('Error: $e', isError: true);
+    } finally {
+      setState(() => _isProcessingPayment = false);
+    }
+  }
+
+  void _showPaymentMethodModal() {
+    showDialog(
+      context: context,
+      builder: (context) => PaymentMethodModal(
+        totalAmount: totalPrice,
+        onPaymentMethodSelected: (method) async {
+          if (method == 'VNPAY') {
+            await _processVNPayPayment();
+          } else {
+            await _processCashPayment();
+          }
+        },
+        isLoading: _isProcessingPayment,
+      ),
+    );
   }
 
   @override
@@ -632,7 +761,7 @@ class _CartScreenState extends State<CartScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _insertOrder,
+                onPressed: _showPaymentMethodModal,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(

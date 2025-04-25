@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import './../models/products.dart';
 import './productDetail_screen.dart';
 import './../services/product_service.dart';
 import './../widgets/coffee_card.dart';
 import './cart_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({Key? key}) : super(key: key);

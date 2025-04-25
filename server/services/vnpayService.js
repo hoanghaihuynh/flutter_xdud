@@ -15,7 +15,7 @@ class VNPayService {
     const createDate = date.toISOString().replace(/[-:]/g, "").split(".")[0];
 
     const params = {
-      vnp_Amount: (amount * 100) / 100,
+      vnp_Amount: amount ,
       vnp_TxnRef: orderId,
       vnp_Command: "pay",
       vnp_CreateDate: createDate,
