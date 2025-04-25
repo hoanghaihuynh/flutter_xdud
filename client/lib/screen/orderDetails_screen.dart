@@ -99,6 +99,11 @@ class OrderCard extends StatelessWidget {
               'Email: ${order.user.email}',
               style: const TextStyle(color: Colors.grey),
             ),
+            if (order.paymentMethod != null)
+              Text(
+                'Payment Method: ${order.paymentMethod}',
+                style: const TextStyle(color: Colors.grey),
+              ),
             const SizedBox(height: 16),
             const Text(
               'Items:',

@@ -1,4 +1,6 @@
 // models/order.dart
+import './payment.dart';
+
 class Order {
   final String id;
   final User user;
@@ -6,6 +8,8 @@ class Order {
   final double total;
   final String status;
   final DateTime createdAt;
+  final String? paymentMethod;
+  final PaymentInfo? paymentInfo;
 
   Order({
     required this.id,
@@ -14,8 +18,9 @@ class Order {
     required this.total,
     required this.status,
     required this.createdAt,
+    this.paymentMethod,
+    this.paymentInfo,
   });
-
   factory Order.fromJson(Map<String, dynamic> json) {
     return Order(
       id: json['_id'],
@@ -25,6 +30,12 @@ class Order {
       total: json['total'].toDouble(),
       status: json['status'],
       createdAt: DateTime.parse(json['created_at']),
+
+      // ✅ Parse thêm
+      paymentMethod: json['payment_method'],
+      paymentInfo: json['paymentInfo'] != null
+          ? PaymentInfo.fromJson(json['paymentInfo'])
+          : null,
     );
   }
 }
