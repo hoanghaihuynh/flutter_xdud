@@ -31,9 +31,25 @@ const productSchema = new Schema(
     },
     imageUrl: {
       type: String,
-      required: true, // Nếu ảnh bắt buộc
+      required: true,
       trim: true,
-      default: "https://via.placeholder.com/150", // Ảnh mặc định nếu không có
+      default: "https://via.placeholder.com/150", // Đường dẫn ảnh mặc định
+    },
+    toppings: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "toppings", // Ánh xạ đến model topping
+      },
+    ],
+    size: {
+      type: [String], // Mảng các giá trị kích thước có thể chọn
+      enum: ["M", "L"], // Các giá trị kích thước có thể chọn
+      default: ["M"], // Giá trị mặc định cho kích thước
+    },
+    sugarLevel: {
+      type: [String], // Mảng các mức độ đường có thể chọn
+      enum: ["0 SG", "50 SG", "75 SG"], // Các mức độ đường có thể chọn
+      default: [""], // Mức độ đường mặc định là 100% (không cần lưu trữ)
     },
   },
   { timestamps: true }

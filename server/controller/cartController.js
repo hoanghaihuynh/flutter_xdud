@@ -29,11 +29,24 @@ exports.getCartByUserId = async (req, res) => {
 // Thêm sản phẩm vào giỏ hàng
 exports.insertCart = async (req, res) => {
   try {
-    const { userId, productId, quantity } = req.body;
-    const cart = await cartService.insertToCart(userId, productId, quantity);
-    res
-      .status(201)
-      .json({ status: 201, success: "PRODUCT ADDED SUCCESSFULLY", data: cart });
+    const { userId, productId, quantity, size, sugarLevel, toppingIds } =
+      req.body;
+
+    // Gọi cartService.insertToCart để xử lý logic nghiệp vụ
+    const cart = await cartService.insertToCart(
+      userId,
+      productId,
+      quantity,
+      size,
+      sugarLevel,
+      toppingIds
+    );
+
+    res.status(201).json({
+      status: 201,
+      success: "PRODUCT ADDED SUCCESSFULLY",
+      data: cart,
+    });
   } catch (error) {
     res.status(500).json({ status: 500, error: error.message });
   }

@@ -5,17 +5,35 @@ const { Schema } = mongoose;
 
 const cartSchema = new Schema(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "users", required: true }, // Liên kết với user
+    userId: { type: Schema.Types.ObjectId, ref: "users", required: true },
     products: [
       {
-        productId: { type: Schema.Types.ObjectId, ref: "products", required: true }, // Liên kết với sản phẩm
-        quantity: { type: Number, required: true, min: 1, default: 1 }, // Số lượng sản phẩm
-        price: { type: Number, required: true }, // Giá tại thời điểm thêm vào giỏ hàng
+        productId: {
+          type: Schema.Types.ObjectId,
+          ref: "products",
+          required: true,
+        },
+        quantity: { type: Number, required: true, min: 1, default: 1 },
+        price: { type: Number, required: true },
+        note: {
+          toppings: [String],
+          size: {
+            type: String,
+            enum: ["M", "L"], // Các giá trị kích thước có thể chọn
+            required: true, // Bắt buộc phải chọn kích thước
+          },
+          sugarLevel: {
+            type: String,
+            enum: ["0 SG", "50 SG", "75 SG"], // Các mức độ đường có thể chọn
+            required: true, // Bắt buộc phải chọn mức độ đường
+            default: "",
+          },
+        },
       },
     ],
-    totalPrice: { type: Number, required: true, default: 0 }, // Tổng giá trị đơn hàng
+    totalPrice: { type: Number, required: true, default: 0 },
   },
-  { timestamps: true } // Thêm createdAt & updatedAt
+  { timestamps: true }
 );
 
 // Tạo Model từ Schema
