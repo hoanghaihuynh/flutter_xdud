@@ -33,7 +33,7 @@ class _CartScreenState extends State<CartScreen> {
   Future<void> _fetchCart() async {
     try {
       final userId = await getUserId();
-      print('Fetched userId: $userId');
+      print('fetch userid trong cart: $userId');
 
       if (userId == null || userId.isEmpty) {
         if (mounted) {
@@ -45,8 +45,8 @@ class _CartScreenState extends State<CartScreen> {
         return;
       }
 
-      final cartItems = await CartService.fetchCartByUserId(userId);
-
+      final cartItems = await CartService.fetchCartByUserId(userId); // Lỗi trong đây
+     
       if (mounted) {
         setState(() {
           _cartItems = cartItems;
