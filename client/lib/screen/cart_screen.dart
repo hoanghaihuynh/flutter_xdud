@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myproject/screen/orderDetails_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
-import './orderDetails_screen.dart';
+// import './orderDetails_screen.dart';
 import './../models/carts.dart';
 import './../services/cart_service.dart';
 import './../utils/getUserId.dart';
@@ -45,8 +46,9 @@ class _CartScreenState extends State<CartScreen> {
         return;
       }
 
-      final cartItems = await CartService.fetchCartByUserId(userId); // Lỗi trong đây
-     
+      final cartItems =
+          await CartService.fetchCartByUserId(userId); // Lỗi trong đây
+
       if (mounted) {
         setState(() {
           _cartItems = cartItems;
@@ -180,64 +182,68 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   // call api đặt hàng
-  Future<void> _insertOrder() async {
-    final userId = await getUserId();
-
-    if (userId == null || userId.isEmpty) {
-      _showSnackBar('User not logged in', isError: true);
-      return;
-    }
-
-    if (_cartItems.isEmpty) {
-      _showSnackBar('Cart is empty', isError: true);
-      return;
-    }
-
-    final List<Map<String, dynamic>> productList = _cartItems.map((item) {
-      return {
-        "product_id": item.productId,
-        "quantity": item.quantity,
-        "price": item.price
-      };
-    }).toList();
-
-    final orderData = {
-      "user_id": userId,
-      "products": productList,
-      "total": totalPrice,
-      "status": "pending"
-    };
-
+  Future<void> _insertOrder({String paymentMethod = "VNPAY"}) async {
     try {
-      setState(() {
-        _isLoading = true;
-      });
-      final url = Uri.parse(AppConfig.getApiUrl('/order/insertOrder'));
+      setState(() => _isLoading = true);
+      final userId = await getUserId();
 
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(orderData),
-      );
+      if (userId == null || userId.isEmpty) {
+        _showSnackBar('Vui lòng đăng nhập', isError: true);
+        return;
+      }
 
-      setState(() {
-        _isLoading = false;
-      });
+      if (_cartItems.isEmpty) {
+        _showSnackBar('Giỏ hàng trống', isError: true);
+        return;
+      }
+
+      final productList = _cartItems.map((item) {
+        return {
+          "product_id": item.productId,
+          "quantity": item.quantity,
+          "price": item.price + item.toppingPrice,
+          "note": {
+            "size": item.size,
+            "sugarLevel": item.sugarLevel,
+            "toppings": item.toppings,
+            "toppingPrice": item.toppingPrice,
+          }
+        };
+      }).toList();
+
+      final orderData = {
+        "user_id": userId,
+        "products": productList,
+        "total": totalPrice,
+        "payment_method": paymentMethod,
+        "status": "pending",
+        "created_at": DateTime.now().toIso8601String(),
+      };
+
+      final response = await http
+          .post(
+            Uri.parse(AppConfig.getApiUrl('/order/insertOrder')),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(orderData),
+          )
+          .timeout(const Duration(seconds: 15));
 
       final responseData = json.decode(response.body);
+      print('insert order ne: $responseData');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        _showSnackBar('ORDERED SUCCESSFULLY');
-        await _clearCart(); // gọi hàm này để xóa giỏ hàng
+        _showSnackBar('ĐẶT HÀNG THÀNH CÔNG');
+        await _clearCart();
       } else {
-        _showSnackBar('Failed to place order: ${responseData['message']}',
-            isError: true);
+        throw responseData['message'] ?? 'Đặt hàng thất bại';
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showSnackBar('Error placing order: $e', isError: true);
+      _showSnackBar('Lỗi: ${e.toString().replaceAll('Exception: ', '')}',
+          isError: true);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -282,7 +288,7 @@ class _CartScreenState extends State<CartScreen> {
           .map((item) => {
                 "product_id": item.productId,
                 "quantity": item.quantity,
-                "price": item.price
+                "price": item.price,
               })
           .toList();
 
@@ -331,47 +337,64 @@ class _CartScreenState extends State<CartScreen> {
   Future<void> _processCashPayment() async {
     try {
       setState(() => _isProcessingPayment = true);
-
       final userId = await getUserId();
+
       if (userId == null || userId.isEmpty) {
-        _showSnackBar('Please login to continue', isError: true);
+        _showSnackBar('Vui lòng đăng nhập để tiếp tục', isError: true);
         return;
       }
 
-      final productList = _cartItems
-          .map((item) => {
-                "product_id": item.productId,
-                "quantity": item.quantity,
-                "price": item.price
-              })
-          .toList();
+      final productList = _cartItems.map((item) {
+        return {
+          "product_id": item.productId,
+          "quantity": item.quantity,
+          "price": item.price + item.toppingPrice, // Bao gồm cả giá topping
+          "note": {
+            "size": item.size,
+            "sugarLevel": item.sugarLevel,
+            "toppings":
+                item.toppings, // Sử dụng trường toppings thay vì toppingIds
+            "toppingPrice": item.toppingPrice,
+          }
+        };
+      }).toList();
 
       final orderData = {
         "user_id": userId,
         "products": productList,
         "total": totalPrice,
         "payment_method": "CASH",
-        "status": "pending"
+        "status": "pending",
+        "created_at": DateTime.now().toIso8601String(),
       };
 
-      final url = Uri.parse(AppConfig.getApiUrl('/order/insertOrder'));
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(orderData),
-      );
+      debugPrint('Order Data: ${jsonEncode(orderData)}');
+
+      final response = await http
+          .post(
+            Uri.parse(AppConfig.getApiUrl('/order/insertOrder')),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(orderData),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      final responseData = json.decode(response.body);
+      print('insert order ne: $responseData');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        _showSnackBar('Order created successfully. Please pay on delivery');
+        _showSnackBar('Tạo đơn hàng thành công. Thanh toán khi nhận hàng');
         await _clearCart();
-        Navigator.pop(context); // Đóng modal
+        Navigator.pop(context);
       } else {
-        throw 'Failed to create order';
+        throw responseData['message'] ?? 'Tạo đơn hàng thất bại';
       }
     } catch (e) {
-      _showSnackBar('Error: $e', isError: true);
+      _showSnackBar('Lỗi: ${e.toString().replaceAll('Exception: ', '')}',
+          isError: true);
     } finally {
-      setState(() => _isProcessingPayment = false);
+      if (mounted) {
+        setState(() => _isProcessingPayment = false);
+      }
     }
   }
 
@@ -561,71 +584,155 @@ class _CartScreenState extends State<CartScreen> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                item.imageUrl,
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  width: 80,
-                  height: 80,
-                  color: Colors.grey[200],
-                  child: const Icon(
-                    Icons.image_not_supported_outlined,
-                    color: Colors.grey,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    item.imageUrl,
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 80,
+                      height: 80,
+                      color: Colors.grey[200],
+                      child: const Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.grey,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    formatCurrency(item.price),
-                    style: TextStyle(
-                      color: Theme.of(context).primaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildQuantityControl(item),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          color: Colors.red,
+                      Text(
+                        item.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
-                        onPressed: () => _removeItem(item.id, item.productId),
-                        tooltip: 'Remove item',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        formatCurrency(item.price),
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Hiển thị thông tin note
+            _buildNoteInfo(item),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _buildQuantityControl(item),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                  ),
+                  onPressed: () => _removeItem(item.id, item.productId),
+                  tooltip: 'Remove item',
+                ),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildNoteInfo(CartItem item) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Hiển thị size
+        if (item.size.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.straighten, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Text(
+                  'Size: ${item.size}',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+
+        // Hiển thị mức đường
+        if (item.sugarLevel.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.local_drink_outlined,
+                    size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Text(
+                  'Đường: ${item.sugarLevel.replaceAll(' SL', '%')}',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+
+        // Hiển thị topping nếu có
+        if (item.toppings.isNotEmpty)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Divider(height: 16, thickness: 0.5),
+              const Text(
+                'Topping:',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: item.toppings.map((topping) {
+                  return Chip(
+                    label: Text(topping),
+                    backgroundColor: Colors.grey[200],
+                    labelStyle: const TextStyle(fontSize: 12),
+                    visualDensity: VisualDensity.compact,
+                  );
+                }).toList(),
+              ),
+              if (item.toppingPrice > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    '+${formatCurrency(item.toppingPrice)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+      ],
     );
   }
 

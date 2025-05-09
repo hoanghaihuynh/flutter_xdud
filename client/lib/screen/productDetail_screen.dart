@@ -90,8 +90,10 @@ class _ProductDetailState extends State<ProductDetail> {
           'toppingIds': selectedToppings,
         }),
       );
+      print('hello'); // get
 
       final responseData = jsonDecode(response.body);
+      print('response data: $responseData');
 
       if (response.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(

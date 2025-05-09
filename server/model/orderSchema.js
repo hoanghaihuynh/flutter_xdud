@@ -30,7 +30,7 @@ const orderSchema = new Schema({
         },
         sugarLevel: {
           type: String,
-          enum: ["0 SG", "50 SG", "75 SG"],
+          enum: ["0 SL", "50 SL", "75 SL"],
           required: true,
           default: "",
         },

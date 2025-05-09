@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import './../utils/formatCurrency.dart';
 import './../models/orders.dart';
 import './../services/order_service.dart';
@@ -91,7 +92,7 @@ class OrderCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Date: ${order.createdAt.toLocal().toString().split('.')[0]}',
+              'Date: ${DateFormat('dd/MM/yyyy HH:mm').format(order.createdAt.toLocal())}',
               style: const TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 8),
@@ -101,7 +102,7 @@ class OrderCard extends StatelessWidget {
             ),
             if (order.paymentMethod != null)
               Text(
-                'Payment Method: ${order.paymentMethod}',
+                'Payment Method: ${order.paymentMethod!.toUpperCase()}',
                 style: const TextStyle(color: Colors.grey),
               ),
             const SizedBox(height: 16),
@@ -110,14 +111,98 @@ class OrderCard extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             ...order.products.map((item) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: Row(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${item.quantity}x '),
-                      Expanded(child: Text(item.product.name)),
-                      Text(
-                        formatCurrency(item.price),
+                      Row(
+                        children: [
+                          Text('${item.quantity}x '),
+                          Expanded(child: Text(item.product.name)),
+                          Text(
+                            formatCurrency(item.price),
+                          ),
+                        ],
                       ),
+                      // Hiển thị thông tin size và sugar level
+                      if (item.note.size.isNotEmpty ||
+                          item.note.sugarLevel.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Row(
+                            children: [
+                              if (item.note.size.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.straighten,
+                                          size: 16, color: Colors.grey),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        item.note.size,
+                                        style: const TextStyle(
+                                            fontSize: 14, color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              if (item.note.sugarLevel.isNotEmpty)
+                                Row(
+                                  children: [
+                                    const Icon(Icons.local_drink_outlined,
+                                        size: 16, color: Colors.grey),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      item.note.sugarLevel
+                                          .replaceAll(' SL', '%'),
+                                      style: const TextStyle(
+                                          fontSize: 14, color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ),
+                      // Hiển thị topping nếu có
+                      if (item.note.toppings.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Topping:',
+                                style:
+                                    TextStyle(fontSize: 14, color: Colors.grey),
+                              ),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: item.note.toppings.map((topping) {
+                                  return Chip(
+                                    label: Text(topping),
+                                    backgroundColor: Colors.grey[200],
+                                    labelStyle: const TextStyle(fontSize: 12),
+                                    visualDensity: VisualDensity.compact,
+                                  );
+                                }).toList(),
+                              ),
+                              if (item.note.toppingPrice > 0)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    '+${formatCurrency(item.note.toppingPrice)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 )),
