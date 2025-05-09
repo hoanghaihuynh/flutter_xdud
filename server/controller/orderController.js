@@ -5,11 +5,34 @@ const VNPayService = require("./../services/vnpayService");
 exports.insertOrder = async (req, res) => {
   try {
     const orderData = req.body;
-    const newOrder = await orderService.insertOrder(orderData);
 
+    // Validate payment_method trước
     if (!orderData.payment_method) {
       return res.status(400).json({ error: "Thiếu phương thức thanh toán" });
     }
+
+    // Validate products
+    if (
+      !orderData.products ||
+      !Array.isArray(orderData.products) ||
+      orderData.products.length === 0
+    ) {
+      return res.status(400).json({ error: "Danh sách sản phẩm không hợp lệ" });
+    }
+
+    for (const product of orderData.products) {
+      if (
+        !orderData.products[0].note.size ||
+        !orderData.products[0].note.sugarLevel
+      ) {
+        return res
+          .status(400)
+          .json({ error: "Thiếu size hoặc sugarLevel cho sản phẩm" });
+      }
+    }
+
+    // Nếu mọi thứ ổn, insert order
+    const newOrder = await orderService.insertOrder(orderData);
 
     // Tạo URL thanh toán VNPay
     const paymentUrl = VNPayService.createPaymentUrl(
@@ -24,7 +47,7 @@ exports.insertOrder = async (req, res) => {
       success: "Tạo order thành công",
       data: {
         order: newOrder,
-        paymentUrl: paymentUrl, // Trả về URL thanh toán cho client
+        paymentUrl: paymentUrl,
       },
     });
   } catch (error) {
@@ -129,5 +152,26 @@ exports.vnpayReturn = async (req, res) => {
   } catch (error) {
     console.error("VNPay return error:", error);
     return res.redirect("/payment/failed?message=Internal error");
+  }
+};
+
+// Xóa đơn hàng
+exports.deleteOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const deletedOrder = await orderService.deleteOrder(orderId);
+
+    res.status(200).json({
+      status: 200,
+      success: "Xóa đơn hàng thành công",
+      data: deletedOrder,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 500,
+      error: "Có lỗi khi xóa đơn hàng",
+      message: error.message,
+    });
   }
 };

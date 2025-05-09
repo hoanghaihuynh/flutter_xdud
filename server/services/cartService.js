@@ -22,8 +22,13 @@ class CartService {
     sugarLevel,
     toppingIds
   ) {
+
+    // Kiểm tra nếu size và sugarLevel không có, trả về lỗi
+    if (!size || !sugarLevel) {
+      throw new Error("Thiếu size hoặc sugarLevel cho sản phẩm");
+    }
+
     // Tìm sản phẩm
-    console.log(toppingIds);
     const product = await Product.findById(productId);
     if (!product) throw new Error("Sản phẩm không tồn tại");
 
@@ -32,11 +37,15 @@ class CartService {
       ? await Topping.find({ _id: { $in: toppingIds } })
       : [];
 
-    // Kiểm tra xem có lấy được topping không
-    console.log("Toppings:", toppings); // Debug để xem các topping đã lấy từ DB
-
-    // Chuyển đổi các topping thành tên topping
+    // Chuyển đổi các topping thành tên topping và giá của chúng
     const toppingNames = toppings.map((topping) => topping.name); // Lấy tên topping
+    const toppingPrices = toppings.map((topping) => topping.price); // Lấy giá topping
+
+    // Tính tổng giá của topping
+    const totalToppingPrice = toppingPrices.reduce(
+      (total, price) => total + price,
+      0
+    );
 
     // Kiểm tra nếu giỏ hàng đã tồn tại
     let cart = await Cart.findOne({ userId });
@@ -57,9 +66,8 @@ class CartService {
             },
           },
         ],
-        totalPrice: product.price * quantity,
+        totalPrice: product.price * quantity + totalToppingPrice * quantity, // Tính tổng giá giỏ hàng, bao gồm giá topping
       });
-      console.log("Cart before save:", cart);
     } else {
       // Nếu giỏ hàng đã có, kiểm tra xem sản phẩm đã có trong giỏ chưa
       const index = cart.products.findIndex(
@@ -90,7 +98,10 @@ class CartService {
 
       // Cập nhật lại tổng giá trị giỏ hàng
       cart.totalPrice = cart.products.reduce(
-        (total, item) => total + item.quantity * item.price,
+        (total, item) =>
+          total +
+          item.quantity * item.price +
+          totalToppingPrice * item.quantity,
         0
       );
     }

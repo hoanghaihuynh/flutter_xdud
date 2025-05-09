@@ -5,5 +5,6 @@ router.post("/order/insertOrder", OrderController.insertOrder);
 router.get("/order/getAllOrder", OrderController.getAllOrder);
 router.put("/order/updateOrder", OrderController.updateOrder);
 router.get("/order/vnpay_return", OrderController.vnpayReturn);
+router.delete("/order/deleteOrder/:orderId", OrderController.deleteOrder);
 
 module.exports = router;

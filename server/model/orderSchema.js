@@ -20,19 +20,18 @@ const orderSchema = new Schema({
       price: { type: Number, required: true },
       note: {
         topping: {
-          type: mongoose.Schema.Types.ObjectId, // Liên kết tới model Topping
-          ref: "toppings", // Tên model Topping
-          required: false, // Không bắt buộc, nhưng nếu có thì sẽ là một ID hợp lệ
+          type: [String],
+          ref: "toppings",
         },
         size: {
           type: String,
-          enum: ["M", "L"], // Các giá trị kích thước có thể chọn
-          required: true, // Bắt buộc phải chọn kích thước
+          enum: ["M", "L"],
+          required: true,
         },
         sugarLevel: {
           type: String,
-          enum: ["0 SG", "50 SG", "75 SG"], // Các mức độ đường có thể chọn
-          required: true, // Bắt buộc phải chọn mức độ đường
+          enum: ["0 SG", "50 SG", "75 SG"],
+          required: true,
           default: "",
         },
       },

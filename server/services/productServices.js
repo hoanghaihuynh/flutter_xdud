@@ -14,7 +14,9 @@ class ProductService {
   // Lấy sản phẩm theo ID
   static async getProductByID(id) {
     try {
-      return await ProductModel.findById(id);
+      return await ProductModel.findById(id).populate("toppings", "name");
+      // "toppings" là tên field trong schema
+      // "name" là field bạn muốn lấy từ topping (chỉ trả về name)
     } catch (error) {
       throw error;
     }

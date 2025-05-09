@@ -3,7 +3,7 @@ const cartService = require("../services/cartService");
 // Xem giỏ hàng
 exports.getAllCart = async (req, res) => {
   try {
-    const carts = await cartService.getAllCarts();
+    const carts = await cartService.getAllCart();
     res.status(200).json({ status: 200, success: "OK", data: carts });
   } catch (error) {
     res.status(500).json({ status: 500, error: error.message });

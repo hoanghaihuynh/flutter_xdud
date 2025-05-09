@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import './../models/products.dart';
+import './../models/products.dart'; // Đảm bảo import đúng file model mới
 import './productDetail_screen.dart';
 import './../services/product_service.dart';
 import './../widgets/coffee_card.dart';
@@ -15,21 +15,29 @@ class ShopScreen extends StatefulWidget {
 
 class _ShopScreenState extends State<ShopScreen> {
   String selectedCategory = 'All';
-  List<Products> filteredItems = [];
-  List<Products> allProducts = [];
+  List<Product> filteredItems = []; // Đổi từ Products sang Product
+  List<Product> allProducts = []; // Đổi từ Products sang Product
   bool isLoading = true;
   String? userId;
   final ProductService _productService = ProductService();
   final TextEditingController _searchController = TextEditingController();
 
+  // Danh sách categories nên được khai báo là static const
+  static const List<String> categories = [
+    'All',
+    'Coffee',
+    'Tea',
+    'Smoothies',
+    'Pastries',
+  ];
+
   @override
   void initState() {
     super.initState();
-    _loadUserId(); // Tải userId khi khởi tạo
+    _loadUserId();
     fetchProducts();
   }
 
-  // Hàm tải userId từ SharedPreferences
   Future<void> _loadUserId() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -37,7 +45,7 @@ class _ShopScreenState extends State<ShopScreen> {
         userId = prefs.getString('userId');
       });
     } catch (e) {
-      print('Error getting userId: $e');
+      debugPrint('Error getting userId: $e');
     }
   }
 
@@ -50,10 +58,14 @@ class _ShopScreenState extends State<ShopScreen> {
         isLoading = false;
       });
     } catch (error) {
-      print("Error loading products: $error");
+      debugPrint("Error loading products: $error");
       setState(() {
         isLoading = false;
       });
+      // Có thể thêm thông báo lỗi cho người dùng
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load products: $error')),
+      );
     }
   }
 
@@ -66,7 +78,6 @@ class _ShopScreenState extends State<ShopScreen> {
     });
   }
 
-  // Chức năng tìm kiếm sản phẩm
   void _searchProducts(String query) {
     setState(() {
       if (query.isEmpty) {
@@ -108,95 +119,97 @@ class _ShopScreenState extends State<ShopScreen> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: _searchProducts,
-                    decoration: InputDecoration(
-                      hintText: 'Search products...',
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(15),
-                        borderSide: BorderSide.none,
+          : RefreshIndicator( // Thêm pull-to-refresh
+              onRefresh: fetchProducts,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: _searchProducts,
+                      decoration: InputDecoration(
+                        hintText: 'Search products...',
+                        prefixIcon: const Icon(Icons.search),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                SizedBox(
-                  height: 50,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: categories.length,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemBuilder: (context, index) {
-                      final category = categories[index];
-                      return GestureDetector(
-                        onTap: () => filterByCategory(category),
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: selectedCategory == category
-                                ? Colors.black
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Center(
-                            child: Text(
-                              category,
-                              style: TextStyle(
-                                color: selectedCategory == category
-                                    ? Colors.white
-                                    : Colors.black,
+                  SizedBox(
+                    height: 50,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: categories.length,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemBuilder: (context, index) {
+                        final category = categories[index];
+                        return GestureDetector(
+                          onTap: () => filterByCategory(category),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: selectedCategory == category
+                                  ? Colors.black
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Center(
+                              child: Text(
+                                category,
+                                style: TextStyle(
+                                  color: selectedCategory == category
+                                      ? Colors.white
+                                      : Colors.black,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.7,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
+                        );
+                      },
                     ),
-                    itemCount: filteredItems.length,
-                    itemBuilder: (context, index) {
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProductDetail(
-                                product: filteredItems[index],
-                                userId: userId ?? '',
-                              ),
-                            ),
-                          );
-                        },
-                        child: CoffeeCard(
-                          coffee: filteredItems[index],
-                          userId: userId ?? '',
-                        ),
-                      );
-                    },
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.7,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                      ),
+                      itemCount: filteredItems.length,
+                      itemBuilder: (context, index) {
+                        final product = filteredItems[index];
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ProductDetail(
+                                  product: product,
+                                  userId: userId ?? '',
+                                ),
+                              ),
+                            );
+                          },
+                          child: CoffeeCard(
+                            product: product, // Thay đổi từ coffee sang product
+                            userId: userId ?? '',
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
     );
   }
