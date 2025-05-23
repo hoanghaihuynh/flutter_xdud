@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:myproject/admin/screen/user_management_screen.dart';
 import 'package:myproject/landing_page.dart';
 import 'package:myproject/screen/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,7 +14,7 @@ class AdminApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Admin Dashboard',
+      title: 'Dashboard Management',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
@@ -87,8 +88,12 @@ class AdminDashboard extends StatelessWidget {
               'User Management',
               Colors.blue,
               () {
-                // Navigate to User Management
-                _navigateTo(context, 'User Management');
+                // Điều hướng đến UserManagementScreen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => UserManagementScreen()),
+                );
               },
             ),
             _buildDashboardCard(
