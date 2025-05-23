@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:myproject/admin/dashboard.dart';
+import 'package:myproject/config/config.dart';
 import 'package:myproject/utils/constants.dart';
 import 'package:myproject/screen/shop_screen.dart';
 import 'package:myproject/screen/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class LandingPage extends StatefulWidget {
   final token;
@@ -15,19 +19,61 @@ class LandingPage extends StatefulWidget {
 
 class _LandingPageState extends State<LandingPage> {
   late String email = '';
+  late String userId = '';
+  String role = '';
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _decodeTokenAndFetchUser();
+  }
+
+  Future<void> _decodeTokenAndFetchUser() async {
     try {
       Map<String, dynamic> jwtDecodedToken = JwtDecoder.decode(widget.token);
       print('Decoded Token: $jwtDecodedToken');
-      email = jwtDecodedToken.containsKey('_email')
-          ? jwtDecodedToken['_email'].toString()
-          : 'Unknown';
+
+      setState(() {
+        email = jwtDecodedToken['_email']?.toString() ?? 'Unknown';
+        userId = jwtDecodedToken['_id']?.toString() ?? '';
+      });
+
+      if (userId.isNotEmpty) {
+        await _fetchUserRole();
+      } else {
+        setState(() => isLoading = false);
+      }
     } catch (e) {
       print('Error decoding token: $e');
-      email = 'Invalid token';
+      setState(() {
+        email = 'Invalid token';
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchUserRole() async {
+    try {
+      final response = await http.get(
+        Uri.parse(AppConfig.getApiUrl('/users/getUserById/$userId')),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final userData = responseData['data'];
+        print('response data: $responseData');
+        setState(() {
+          role = userData['role']?.toString().toLowerCase() ?? '';
+          isLoading = false;
+        });
+      } else {
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      print('Error fetching user role: $e');
+      setState(() => isLoading = false);
     }
   }
 
@@ -35,6 +81,13 @@ class _LandingPageState extends State<LandingPage> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => ShopScreen()),
+    );
+  }
+
+  void _navigateToAdminDashboard() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => AdminApp()),
     );
   }
 
@@ -90,7 +143,7 @@ class _LandingPageState extends State<LandingPage> {
                         padding: const EdgeInsets.all(16.0),
                         child: Row(
                           children: [
-                            // Biểu tượng email
+                            // Email icon
                             Container(
                               padding: EdgeInsets.all(10),
                               decoration: BoxDecoration(
@@ -105,7 +158,7 @@ class _LandingPageState extends State<LandingPage> {
                             ),
                             SizedBox(width: 16),
 
-                            // Thông tin email
+                            // Email information
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,7 +185,7 @@ class _LandingPageState extends State<LandingPage> {
                               ),
                             ),
 
-                            // Nút đăng xuất
+                            // Logout button
                             IconButton(
                               icon: Icon(Icons.logout, color: Colors.red),
                               onPressed: () async {
@@ -159,7 +212,7 @@ class _LandingPageState extends State<LandingPage> {
                                 );
 
                                 if (confirm == true) {
-                                  // Xử lý đăng xuất
+                                  // Handle logout
                                   final prefs =
                                       await SharedPreferences.getInstance();
                                   await prefs.remove('token');
@@ -194,6 +247,45 @@ class _LandingPageState extends State<LandingPage> {
                     ),
 
                     SizedBox(height: 40),
+
+                    // Admin Dashboard Button (conditionally shown)
+                    if (role == 'admin')
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: ElevatedButton(
+                          onPressed: _navigateToAdminDashboard,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            elevation: 5,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'ADMIN DASHBOARD',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(
+                                Icons.admin_panel_settings,
+                                size: 20,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
 
                     // Shop Now Button
                     ElevatedButton(

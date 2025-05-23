@@ -41,21 +41,27 @@ exports.getUserById = async (req, res) => {
       .json({ status: 500, error: "Lỗi server", message: error.message });
   }
 };
-
+// Đăng ký
 exports.register = async (req, res, next) => {
   try {
-    const { email, password } = req.body; // sử dụng body-parser để phản hồi về cho frontedn
+    const { email, password, role } = req.body;
 
-    const successResponse = await UserService.registerUser(email, password);
+    const successResponse = await UserService.registerUser(email, password, role);
 
-    res
-      .status(201)
-      .json({ statusCode: 201, success: "User Registered Successfully" });
+    res.status(201).json({
+      statusCode: 201,
+      success: "User Registered Successfully",
+    });
   } catch (error) {
-    res.status(500).json({ statusCode: 401, error: "Internal Server Error" });
+    res.status(500).json({
+      statusCode: 401,
+      error: "Internal Server Error",
+      message: error.message,
+    });
   }
 };
 
+// Đăng nhập
 exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -85,3 +91,42 @@ exports.login = async (req, res, next) => {
     res.status(400).json({ success: false, error: "LOGIN FAILED" });
   }
 };
+
+// Chỉnh sửa tài khoản
+exports.updateProfile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, password, role } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        status: 404,
+        error: "Không tìm thấy người dùng",
+      });
+    }
+
+    if (email) user.email = email;
+    if (role) user.role = role;
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      const hashPassword = await bcrypt.hash(password, salt);
+      user.password = hashPassword;
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      status: 200,
+      success: "Cập nhật thông tin người dùng thành công",
+      data: user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 500,
+      error: "Lỗi server",
+      message: error.message,
+    });
+  }
+};
+
