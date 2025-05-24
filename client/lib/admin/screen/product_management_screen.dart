@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import './../../admin/services/product_service.dart';
 import './../../admin/models/product_model.dart';
 import './../utils/format_currency.dart';
+import './../dialogs/edit_product_dialog.dart';
 
 class ProductManagementScreen extends StatefulWidget {
   @override
@@ -129,15 +130,15 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
   }
 
   void _showEditProductDialog(Product product) {
-    // showDialog(
-    //   context: context,
-    //   builder: (context) {
-    //     return EditProductDialog(
-    //       product: product,
-    //       onProductUpdated: _loadProducts,
-    //     );
-    //   },
-    // );
+    showDialog(
+      context: context,
+      builder: (context) {
+        return EditProductDialog(
+          product: product,
+          onProductUpdated: _loadProducts,
+        );
+      },
+    );
   }
 
   Future<void> _deleteProduct(String id) async {
