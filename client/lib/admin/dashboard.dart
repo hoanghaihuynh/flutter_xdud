@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:myproject/admin/screen/product_management_screen.dart';
 import 'package:myproject/admin/screen/user_management_screen.dart';
-import 'package:myproject/landing_page.dart';
+import 'package:myproject/admin/screen/topping_management_screen.dart';
+// import 'package:myproject/landing_page.dart';
 import 'package:myproject/screen/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -102,8 +104,11 @@ class AdminDashboard extends StatelessWidget {
               'Product Management',
               Colors.green,
               () {
-                // Navigate to Product Management
-                _navigateTo(context, 'Product Management');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => ProductManagementScreen()),
+                );
               },
             ),
             _buildDashboardCard(
@@ -122,8 +127,11 @@ class AdminDashboard extends StatelessWidget {
               'Topping Management',
               Colors.purple,
               () {
-                // Navigate to Topping Management
-                _navigateTo(context, 'Topping Management');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => ToppingManagementScreen()),
+                );
               },
             ),
             _buildDashboardCard(
