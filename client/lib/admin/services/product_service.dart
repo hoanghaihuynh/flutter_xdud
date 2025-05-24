@@ -33,11 +33,11 @@ class ProductService {
     }
   }
 
-  Future<Product> createProduct(Product product) async {
+  Future<Product> createProduct(Map<String, dynamic> productData) async {
     final response = await http.post(
       Uri.parse(AppConfig.getApiUrl('/products/insertProduct')),
       headers: {'Content-Type': 'application/json'},
-      body: json.encode(product.toJson()),
+      body: json.encode(productData),
     );
 
     if (response.statusCode == 201) {

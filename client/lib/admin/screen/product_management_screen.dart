@@ -3,6 +3,7 @@ import './../../admin/services/product_service.dart';
 import './../../admin/models/product_model.dart';
 import './../utils/format_currency.dart';
 import './../dialogs/edit_product_dialog.dart';
+import './../dialogs/add_product_dialog.dart';
 
 class ProductManagementScreen extends StatefulWidget {
   @override
@@ -126,7 +127,14 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
   }
 
   void _showAddProductDialog() {
-    // Implement add product dialog
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AddProductDialog(
+          onProductAdded: _loadProducts,
+        );
+      },
+    );
   }
 
   void _showEditProductDialog(Product product) {
