@@ -45,7 +45,7 @@ class Product {
           : <String>['M'], // Giá trị mặc định
       sugarLevel: json['sugarLevel'] != null
           ? List<String>.from(json['sugarLevel'])
-          : <String>['0 SG'], // Giá trị mặc định
+          : <String>['0 SL'], // Giá trị mặc định
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),

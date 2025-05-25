@@ -41,7 +41,7 @@ class CartItem {
           ? 'https://via.placeholder.com/150'
           : json['productId']['imageUrl'] ?? 'https://via.placeholder.com/150',
       size: json['note']?['size'] ?? 'M',
-      sugarLevel: json['note']?['sugarLevel'] ?? '50 SG',
+      sugarLevel: json['note']?['sugarLevel'] ?? '50 SL',
       toppings: List<String>.from(json['note']?['toppings'] ?? []),
       toppingPrice: (json['toppingPrice'] ?? 0).toDouble(),
     );

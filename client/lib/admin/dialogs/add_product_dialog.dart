@@ -37,7 +37,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
 
   // Available options
   final List<String> _allSizes = ['M', 'L'];
-  final List<String> _allSugarLevels = ['0 SG', '50 SG', '75 SG'];
+  final List<String> _allSugarLevels = ['0 SL', '50 SL', '75 SL'];
   late Future<List<Topping>> _futureToppings;
 
   @override
@@ -45,7 +45,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
     super.initState();
     _initializeControllers();
     _selectedSizes = ['M']; // Default value
-    _selectedSugarLevels = ['0 SG']; // Default value
+    _selectedSugarLevels = ['0 SL']; // Default value
     _selectedToppings = [];
     _futureToppings = _toppingService.getAllToppings();
   }

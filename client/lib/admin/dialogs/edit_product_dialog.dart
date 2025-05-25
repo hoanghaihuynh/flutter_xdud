@@ -33,7 +33,7 @@ class _EditProductDialogState extends State<EditProductDialog> {
   late List<String> _selectedToppings;
 
   final List<String> _allSizes = ['M', 'L'];
-  final List<String> _allSugarLevels = ['0 SG', '50 SG', '75 SG'];
+  final List<String> _allSugarLevels = ['0 SL', '50 SL', '75 SL'];
   final ProductService _productService = ProductService();
   final ToppingService _toppingService = ToppingService();
 

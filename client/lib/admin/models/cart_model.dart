@@ -20,7 +20,7 @@ class CartItem {
     this.quantity = 1,
     this.imageUrl = 'https://via.placeholder.com/150',
     this.size = 'M',
-    this.sugarLevel = '50 SG',
+    this.sugarLevel = '50 SL',
     this.toppings = const [],
     this.toppingPrice = 0.0,
     this.createdAt,
@@ -46,7 +46,7 @@ class CartItem {
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
       imageUrl: productInfo['imageUrl']?.toString() ?? 'https://via.placeholder.com/150',
       size: note['size']?.toString() ?? 'M',
-      sugarLevel: note['sugarLevel']?.toString() ?? '50 SG',
+      sugarLevel: note['sugarLevel']?.toString() ?? '50 SL',
       toppings: List<String>.from(note['toppings'] ?? []),
       toppingPrice: (json['toppingPrice'] as num?)?.toDouble() ?? 0.0,
       createdAt: json['createdAt'] != null 
