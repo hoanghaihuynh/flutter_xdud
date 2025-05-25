@@ -48,7 +48,7 @@ const productSchema = new Schema(
     },
     sugarLevel: {
       type: [String], // Mảng các mức độ đường có thể chọn
-      enum: ["0 SG", "50 SG", "75 SG"], // Các mức độ đường có thể chọn
+      enum: ["0 SL", "50 SL", "75 SL"], // Các mức độ đường có thể chọn
       default: [""], // Mức độ đường mặc định là 100% (không cần lưu trữ)
     },
   },

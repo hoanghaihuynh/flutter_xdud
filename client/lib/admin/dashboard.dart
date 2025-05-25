@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:myproject/admin/screen/product_management_screen.dart';
 import 'package:myproject/admin/screen/user_management_screen.dart';
 import 'package:myproject/admin/screen/topping_management_screen.dart';
-// import 'package:myproject/landing_page.dart';
 import 'package:myproject/screen/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -136,12 +135,11 @@ class AdminDashboard extends StatelessWidget {
             ),
             _buildDashboardCard(
               context,
-              Icons.shopping_basket,
-              'Cart Management',
-              Colors.red,
+              Icons.shopping_bag,
+              'Carts',
+              Colors.teal,
               () {
-                // Navigate to Cart Management
-                _navigateTo(context, 'Cart Management');
+                _navigateTo(context, 'Carts');
               },
             ),
             _buildDashboardCard(

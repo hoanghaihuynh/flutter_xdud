@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import './../../admin/services/product_service.dart';
-import './../../admin/models/product_model.dart';
+import './../services/product_service.dart';
+import './../models/product_model.dart';
 import './../utils/format_currency.dart';
 import './../dialogs/edit_product_dialog.dart';
 import './../dialogs/add_product_dialog.dart';

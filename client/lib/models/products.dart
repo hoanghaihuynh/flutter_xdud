@@ -33,7 +33,7 @@ class Product {
       stock: json['stock'] ?? 0,
       imageUrl: json['imageUrl'] ?? 'https://via.placeholder.com/150',
       sizes: List<String>.from(json['size'] ?? ['M']),
-      sugarLevels: List<String>.from(json['sugarLevel'] ?? ['50 SG']),
+      sugarLevels: List<String>.from(json['sugarLevel'] ?? ['50 SL']),
       toppingIds: (json['toppings'] as List<dynamic>?)
               ?.map((e) => e.toString())
               ?.toList() ??

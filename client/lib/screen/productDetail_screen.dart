@@ -23,7 +23,7 @@ class _ProductDetailState extends State<ProductDetail> {
   int quantity = 1;
   bool isAddingToCart = false;
   String selectedSize = 'M'; // Default size
-  String selectedSugarLevel = '50 SG'; // Default sugar level
+  String selectedSugarLevel = '50 SL'; // Default sugar level
   List<String> selectedToppings = []; // Selected toppings
   final ToppingService _toppingService = ToppingService();
   Map<String, String> _toppingNames = {}; // Lưu trữ tên topping
