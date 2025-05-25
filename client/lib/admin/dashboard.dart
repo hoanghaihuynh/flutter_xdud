@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:myproject/admin/screen/cart_management_screen.dart';
 import 'package:myproject/admin/screen/product_management_screen.dart';
 import 'package:myproject/admin/screen/user_management_screen.dart';
 import 'package:myproject/admin/screen/topping_management_screen.dart';
@@ -135,11 +136,15 @@ class AdminDashboard extends StatelessWidget {
             ),
             _buildDashboardCard(
               context,
-              Icons.shopping_bag,
-              'Carts',
+              Icons.shopping_cart,
+              'Cart Management',
               Colors.teal,
               () {
-                _navigateTo(context, 'Carts');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const CartManagementScreen()),
+                );
               },
             ),
             _buildDashboardCard(
