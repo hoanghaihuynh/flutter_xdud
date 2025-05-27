@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/user_service.dart';
-import '../models/user_model.dart';
+import './../services/user_service.dart';
+import './../models/user_model.dart';
 
 class UserManagementScreen extends StatefulWidget {
   @override

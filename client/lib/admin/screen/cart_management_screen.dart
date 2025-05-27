@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../admin/models/cart_model.dart';
-import '../../admin/services/cart_service.dart';
+import './../models/cart_model.dart';
+import './../services/cart_service.dart';
 
 class CartManagementScreen extends StatefulWidget {
   const CartManagementScreen({super.key});
