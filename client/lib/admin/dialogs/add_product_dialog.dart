@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-// import 'package:myproject/admin/models/product_model.dart';
-import 'package:myproject/admin/models/topping_model.dart';
-import 'package:myproject/admin/services/product_service.dart';
-import 'package:myproject/admin/services/topping_service.dart';
-// import 'package:myproject/admin/utils/format_currency.dart';
+import './../models/topping_model.dart';
+import './../services/product_service.dart';
+import './../services/topping_service.dart';
 
 class AddProductDialog extends StatefulWidget {
   final Function() onProductAdded;
@@ -79,8 +77,8 @@ class _AddProductDialogState extends State<AddProductDialog> {
           'stock': int.parse(_stockController.text),
           'description': _descController.text,
           'category': _categoryController.text,
-          'imageUrl': _imageUrlController.text.isNotEmpty 
-              ? _imageUrlController.text 
+          'imageUrl': _imageUrlController.text.isNotEmpty
+              ? _imageUrlController.text
               : 'https://via.placeholder.com/150',
           'size': _selectedSizes,
           'sugarLevel': _selectedSugarLevels,
@@ -88,10 +86,10 @@ class _AddProductDialogState extends State<AddProductDialog> {
         };
 
         await _productService.createProduct(newProduct);
-        
+
         Navigator.of(context).pop();
         widget.onProductAdded();
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Thêm sản phẩm mới thành công!'),
