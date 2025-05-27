@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:myproject/admin/dialogs/confirm_delete_dialog.dart';
+import 'package:myproject/admin/utils/format_currency.dart';
 // import 'package:intl/intl.dart';
 import './../models/order_model.dart';
 import './../services/order_service.dart';
@@ -20,6 +22,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     _loadOrders();
   }
 
+  // CALL API xem Danh Sách Order
   Future<void> _loadOrders() async {
     setState(() => _isLoading = true);
     try {
@@ -34,12 +37,16 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     }
   }
 
+  // CALL API xóa order
   Future<void> _deleteOrder(String orderId) async {
     try {
       final success = await OrderService.deleteOrder(orderId);
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Order deleted successfully')),
+          const SnackBar(
+            content: Text('ORDER DELETED SUCCESSFULLY'),
+            backgroundColor: Colors.green,
+          ),
         );
         _loadOrders(); // Refresh list
       }
@@ -88,14 +95,28 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Order #${order.id.substring(0, 8)}'),
-                Chip(
-                  label: Text(order.status),
-                  backgroundColor: _getStatusColor(order.status),
+                Row(
+                  children: [
+                    Chip(
+                      label: Text(order.status),
+                      backgroundColor: getStatusColor(order.status),
+                    ),
+                    const SizedBox(
+                        width: 8), // Thêm khoảng cách giữa chip và nút xóa
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => showConfirmDeleteDialog(
+                        context: context,
+                        orderId: order.id,
+                        onDelete: _deleteOrder,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
             Text('User: ${order.user.email}'),
-            Text('Total: \$${order.total.toStringAsFixed(2)}'),
+            Text('Total: ${formatCurrency(order.total)}'),
             if (order.paymentMethod != null)
               Text('Payment: ${order.paymentMethod}'),
 
@@ -115,51 +136,15 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                                 : const Icon(Icons.fastfood),
                             title: Text(product.product.name),
                             subtitle: Text(
-                                '${product.quantity} x \$${product.price}'),
-                            trailing: Text(
-                                '\$${(product.quantity * product.price).toStringAsFixed(2)}'),
+                                '${product.quantity} x ${formatCurrency(product.price)}'),
+                            trailing: Text(formatCurrency(
+                                product.quantity * product.price)),
                           ))
                       .toList(),
                 ],
               ),
           ],
         ),
-      ),
-    );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      case 'processing':
-        return Colors.orange;
-      default:
-        return Colors.blue;
-    }
-  }
-
-  void _confirmDelete(String orderId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: const Text('Are you sure you want to delete this order?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteOrder(orderId);
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
       ),
     );
   }
