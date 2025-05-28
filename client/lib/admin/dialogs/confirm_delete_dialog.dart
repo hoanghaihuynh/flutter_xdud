@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 Color getStatusColor(String status) {
   switch (status.toLowerCase()) {
-    case 'deliveried':
+    case 'completed':
       return Colors.green;
     case 'cancelled':
       return Colors.red;

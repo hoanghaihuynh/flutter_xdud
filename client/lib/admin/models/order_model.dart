@@ -1,5 +1,5 @@
-import 'package:myproject/admin/models/payment_model.dart';
-import 'package:myproject/models/orders.dart';
+// import './payment_model.dart';
+import './../../models/orders.dart';
 
 class Order {
   final String id;
@@ -8,11 +8,7 @@ class Order {
   final double total;
   final String status;
   final DateTime createdAt;
-  final DateTime updatedAt; // Thêm trường này nếu server có
   final String? paymentMethod;
-  final PaymentInfo? paymentInfo;
-  final String? deliveryAddress; // Thêm nếu cần
-  final String? phoneNumber; // Thêm nếu cần
 
   Order({
     required this.id,
@@ -21,11 +17,7 @@ class Order {
     required this.total,
     required this.status,
     required this.createdAt,
-    required this.updatedAt, // Thêm vào constructor
     this.paymentMethod,
-    this.paymentInfo,
-    this.deliveryAddress,
-    this.phoneNumber,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -37,10 +29,8 @@ class Order {
             .map((x) => OrderProduct.fromJson(x))),
         total: (json['total'] as num?)?.toDouble() ?? 0.0,
         status: json['status']?.toString() ?? 'pending',
-        createdAt:
-            DateTime.parse(json['created_at'] ?? DateTime.now().toString()),
-        updatedAt:
-            DateTime.parse(json['updated_at'] ?? DateTime.now().toString()),
+        createdAt: DateTime.parse(
+            json['created_at'] ?? DateTime.now().toIso8601String()),
         paymentMethod: json['payment_method']?.toString(),
       );
     } catch (e) {
@@ -49,11 +39,9 @@ class Order {
     }
   }
 
-  // Thêm phương thức copyWith để thuận tiện khi cập nhật
   Order copyWith({
     String? status,
     String? paymentMethod,
-    PaymentInfo? paymentInfo,
   }) {
     return Order(
       id: id,
@@ -62,11 +50,7 @@ class Order {
       total: total,
       status: status ?? this.status,
       createdAt: createdAt,
-      updatedAt: updatedAt,
       paymentMethod: paymentMethod ?? this.paymentMethod,
-      paymentInfo: paymentInfo ?? this.paymentInfo,
-      deliveryAddress: deliveryAddress,
-      phoneNumber: phoneNumber,
     );
   }
 }
@@ -76,7 +60,7 @@ class OrderProduct {
   final int quantity;
   final double price;
   final String id;
-  final OrderNote note; // Thêm trường note
+  final OrderNote note;
 
   OrderProduct({
     required this.product,
@@ -104,5 +88,3 @@ class OrderProduct {
         'note': note.toJson(),
       };
 }
-
-

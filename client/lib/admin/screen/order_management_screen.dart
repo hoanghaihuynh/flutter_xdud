@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:myproject/admin/dialogs/confirm_delete_dialog.dart';
-import 'package:myproject/admin/utils/format_currency.dart';
+import './../dialogs/confirm_delete_dialog.dart';
+// import './../dialogs/edit_order_dialog.dart';
+import './../utils/format_currency.dart';
 import './../models/order_model.dart';
 import './../services/order_service.dart';
 
@@ -29,7 +30,10 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       setState(() => _orders = orders);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
+        SnackBar(
+          content: Text('Lỗi khi tải đơn hàng: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       setState(() => _isLoading = false);
@@ -54,6 +58,64 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         SnackBar(content: Text('Failed to delete order: ${e.toString()}')),
       );
     }
+  }
+
+  // CALL API edit order
+  Future<void> _updateOrderStatus(
+      BuildContext context, String orderId, String newStatus) async {
+    try {
+      final updatedOrder = await OrderService.updateOrder(
+        orderId: orderId,
+        updateData: {'status': newStatus},
+      );
+
+      if (updatedOrder != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cập nhật thành công'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadOrders();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showStatusUpdateDialog(
+      BuildContext context, String orderId, String currentStatus) {
+    final statuses = ['pending', 'completed', 'cancelled'];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cập nhật trạng thái'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: statuses.map((status) {
+            return ListTile(
+              title: Text(status),
+              trailing: currentStatus == status
+                  ? const Icon(Icons.check, color: Colors.green)
+                  : null,
+              onTap: () {
+                Navigator.pop(context);
+                _updateOrderStatus(
+                    context, orderId, status); // Thêm context ở đây
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
   }
 
   @override
@@ -82,7 +144,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     );
   }
 
-  // Trong order_management_screen.dart
   Widget _buildOrderCard(Order order) {
     return Card(
       child: Padding(
@@ -100,8 +161,11 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                       label: Text(order.status),
                       backgroundColor: getStatusColor(order.status),
                     ),
-                    const SizedBox(
-                        width: 8), // Thêm khoảng cách giữa chip và nút xóa
+                    const SizedBox(width: 8),
+                    IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () => _showStatusUpdateDialog(
+                            context, order.id, order.status)),
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () => showConfirmDeleteDialog(
