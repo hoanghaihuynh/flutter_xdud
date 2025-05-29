@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
-import './../models/product_model.dart';
-import './../models/topping_model.dart';
-import './../services/product_service.dart';
-import './../services/topping_service.dart';
-// import 'package:myproject/admin/utils/format_currency.dart';
+import '../../models/topping_model.dart';
+import '../../services/product_service.dart';
+import '../../services/topping_service.dart';
 
-class EditProductDialog extends StatefulWidget {
-  final Product product;
-  final Function() onProductUpdated;
+class AddProductDialog extends StatefulWidget {
+  final Function() onProductAdded;
 
-  const EditProductDialog({
+  const AddProductDialog({
     Key? key,
-    required this.product,
-    required this.onProductUpdated,
+    required this.onProductAdded,
   }) : super(key: key);
 
   @override
-  _EditProductDialogState createState() => _EditProductDialogState();
+  _AddProductDialogState createState() => _AddProductDialogState();
 }
 
-class _EditProductDialogState extends State<EditProductDialog> {
+class _AddProductDialogState extends State<AddProductDialog> {
   final _formKey = GlobalKey<FormState>();
+  final ProductService _productService = ProductService();
+  final ToppingService _toppingService = ToppingService();
+
+  // Controllers
   late TextEditingController _nameController;
   late TextEditingController _priceController;
   late TextEditingController _stockController;
@@ -28,33 +28,33 @@ class _EditProductDialogState extends State<EditProductDialog> {
   late TextEditingController _categoryController;
   late TextEditingController _imageUrlController;
 
+  // State for selections
   late List<String> _selectedSizes;
   late List<String> _selectedSugarLevels;
   late List<String> _selectedToppings;
 
+  // Available options
   final List<String> _allSizes = ['M', 'L'];
   final List<String> _allSugarLevels = ['0 SL', '50 SL', '75 SL'];
-  final ProductService _productService = ProductService();
-  final ToppingService _toppingService = ToppingService();
+  late Future<List<Topping>> _futureToppings;
 
   @override
   void initState() {
     super.initState();
     _initializeControllers();
-    _selectedSizes = List.from(widget.product.size);
-    _selectedSugarLevels = List.from(widget.product.sugarLevel);
-    _selectedToppings = List.from(widget.product.toppings);
+    _selectedSizes = ['M']; // Default value
+    _selectedSugarLevels = ['0 SL']; // Default value
+    _selectedToppings = [];
+    _futureToppings = _toppingService.getAllToppings();
   }
 
   void _initializeControllers() {
-    _nameController = TextEditingController(text: widget.product.name);
-    _priceController =
-        TextEditingController(text: widget.product.price.toString());
-    _stockController =
-        TextEditingController(text: widget.product.stock.toString());
-    _descController = TextEditingController(text: widget.product.description);
-    _categoryController = TextEditingController(text: widget.product.category);
-    _imageUrlController = TextEditingController(text: widget.product.imageUrl);
+    _nameController = TextEditingController();
+    _priceController = TextEditingController();
+    _stockController = TextEditingController();
+    _descController = TextEditingController();
+    _categoryController = TextEditingController();
+    _imageUrlController = TextEditingController();
   }
 
   @override
@@ -71,26 +71,28 @@ class _EditProductDialogState extends State<EditProductDialog> {
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       try {
-        final updateData = {
+        final newProduct = {
           'name': _nameController.text,
           'price': double.parse(_priceController.text),
           'stock': int.parse(_stockController.text),
           'description': _descController.text,
           'category': _categoryController.text,
-          'imageUrl': _imageUrlController.text,
+          'imageUrl': _imageUrlController.text.isNotEmpty
+              ? _imageUrlController.text
+              : 'https://via.placeholder.com/150',
           'size': _selectedSizes,
           'sugarLevel': _selectedSugarLevels,
           'toppings': _selectedToppings,
         };
 
-        await _productService.updateProduct(widget.product.id, updateData);
+        await _productService.createProduct(newProduct);
 
         Navigator.of(context).pop();
-        widget.onProductUpdated();
+        widget.onProductAdded();
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Cập nhật sản phẩm thành công!'),
+            content: Text('Thêm sản phẩm mới thành công!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -107,52 +109,57 @@ class _EditProductDialogState extends State<EditProductDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Chỉnh sửa sản phẩm'),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildNameField(),
-              SizedBox(height: 12),
-              _buildPriceField(),
-              SizedBox(height: 12),
-              _buildStockField(),
-              SizedBox(height: 12),
-              _buildDescriptionField(),
-              SizedBox(height: 12),
-              _buildCategoryField(),
-              SizedBox(height: 12),
-              _buildImageUrlField(),
-              SizedBox(height: 16),
-              _buildSizeSelection(),
-              SizedBox(height: 12),
-              _buildSugarLevelSelection(),
-              SizedBox(height: 12),
-              _buildToppingsSelection(),
-            ],
+    return Dialog(
+      insetPadding: EdgeInsets.all(16),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Thêm sản phẩm mới',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 20),
+                _buildNameField(),
+                SizedBox(height: 16),
+                _buildPriceField(),
+                SizedBox(height: 16),
+                _buildStockField(),
+                SizedBox(height: 16),
+                _buildCategoryField(),
+                SizedBox(height: 16),
+                _buildDescriptionField(),
+                SizedBox(height: 16),
+                _buildImageUrlField(),
+                SizedBox(height: 20),
+                _buildSizeSelection(),
+                SizedBox(height: 16),
+                _buildSugarLevelSelection(),
+                SizedBox(height: 16),
+                _buildToppingsSelection(),
+                SizedBox(height: 24),
+                _buildActionButtons(),
+              ],
+            ),
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('HỦY', style: TextStyle(color: Colors.red)),
-        ),
-        ElevatedButton(
-          onPressed: _submitForm,
-          child: Text('LƯU THAY ĐỔI'),
-        ),
-      ],
     );
   }
 
   Widget _buildNameField() {
     return TextFormField(
       controller: _nameController,
-      decoration: InputDecoration(labelText: 'Tên sản phẩm*'),
+      decoration: InputDecoration(
+        labelText: 'Tên sản phẩm*',
+        border: OutlineInputBorder(),
+      ),
       validator: (value) => value!.isEmpty ? 'Vui lòng nhập tên' : null,
     );
   }
@@ -163,6 +170,7 @@ class _EditProductDialogState extends State<EditProductDialog> {
       decoration: InputDecoration(
         labelText: 'Giá*',
         suffixText: '₫',
+        border: OutlineInputBorder(),
       ),
       keyboardType: TextInputType.number,
       validator: (value) {
@@ -176,7 +184,10 @@ class _EditProductDialogState extends State<EditProductDialog> {
   Widget _buildStockField() {
     return TextFormField(
       controller: _stockController,
-      decoration: InputDecoration(labelText: 'Số lượng*'),
+      decoration: InputDecoration(
+        labelText: 'Số lượng*',
+        border: OutlineInputBorder(),
+      ),
       keyboardType: TextInputType.number,
       validator: (value) {
         if (value!.isEmpty) return 'Vui lòng nhập số lượng';
@@ -186,26 +197,36 @@ class _EditProductDialogState extends State<EditProductDialog> {
     );
   }
 
-  Widget _buildDescriptionField() {
-    return TextFormField(
-      controller: _descController,
-      decoration: InputDecoration(labelText: 'Mô tả'),
-      maxLines: 2,
-    );
-  }
-
   Widget _buildCategoryField() {
     return TextFormField(
       controller: _categoryController,
-      decoration: InputDecoration(labelText: 'Danh mục*'),
+      decoration: InputDecoration(
+        labelText: 'Danh mục*',
+        border: OutlineInputBorder(),
+      ),
       validator: (value) => value!.isEmpty ? 'Vui lòng nhập danh mục' : null,
+    );
+  }
+
+  Widget _buildDescriptionField() {
+    return TextFormField(
+      controller: _descController,
+      decoration: InputDecoration(
+        labelText: 'Mô tả',
+        border: OutlineInputBorder(),
+      ),
+      maxLines: 3,
     );
   }
 
   Widget _buildImageUrlField() {
     return TextFormField(
       controller: _imageUrlController,
-      decoration: InputDecoration(labelText: 'URL hình ảnh'),
+      decoration: InputDecoration(
+        labelText: 'URL hình ảnh',
+        border: OutlineInputBorder(),
+        hintText: 'https://example.com/image.jpg',
+      ),
     );
   }
 
@@ -213,7 +234,7 @@ class _EditProductDialogState extends State<EditProductDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Kích thước:', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text('Kích thước*:', style: TextStyle(fontWeight: FontWeight.bold)),
         Wrap(
           spacing: 8,
           children: _allSizes.map((size) {
@@ -240,7 +261,7 @@ class _EditProductDialogState extends State<EditProductDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Mức đường:', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text('Mức đường*:', style: TextStyle(fontWeight: FontWeight.bold)),
         Wrap(
           spacing: 8,
           children: _allSugarLevels.map((level) {
@@ -265,7 +286,7 @@ class _EditProductDialogState extends State<EditProductDialog> {
 
   Widget _buildToppingsSelection() {
     return FutureBuilder<List<Topping>>(
-      future: _toppingService.getAllToppings(),
+      future: _futureToppings,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return CircularProgressIndicator();
@@ -298,6 +319,23 @@ class _EditProductDialogState extends State<EditProductDialog> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('HỦY', style: TextStyle(color: Colors.red)),
+        ),
+        SizedBox(width: 16),
+        ElevatedButton(
+          onPressed: _submitForm,
+          child: Text('THÊM SẢN PHẨM'),
+        ),
+      ],
     );
   }
 }

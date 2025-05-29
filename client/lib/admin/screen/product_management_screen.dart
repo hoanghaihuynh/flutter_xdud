@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import './../services/product_service.dart';
 import './../models/product_model.dart';
 import './../utils/format_currency.dart';
-import './../dialogs/edit_product_dialog.dart';
-import './../dialogs/add_product_dialog.dart';
+import '../dialogs/product_dialog/edit_product_dialog.dart';
+import '../dialogs/product_dialog/add_product_dialog.dart';
 
 class ProductManagementScreen extends StatefulWidget {
   @override

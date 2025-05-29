@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import './../dialogs/confirm_delete_dialog.dart';
+import '../dialogs/order_dialog/confirm_delete_dialog.dart';
 import './../utils/format_currency.dart';
 import './../models/order_model.dart';
 import './../services/order_service.dart';
