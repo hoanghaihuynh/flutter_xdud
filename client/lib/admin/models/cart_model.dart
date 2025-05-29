@@ -9,7 +9,7 @@ class CartItem {
   final String sugarLevel;
   final List<String> toppings;
   final double toppingPrice;
-  final DateTime? createdAt; // Thêm trường thời gian
+  final DateTime? createdAt;
   final DateTime? updatedAt;
 
   CartItem({
@@ -20,7 +20,7 @@ class CartItem {
     this.quantity = 1,
     this.imageUrl = 'https://via.placeholder.com/150',
     this.size = 'M',
-    this.sugarLevel = '50 SL',
+    this.sugarLevel = '50%',
     this.toppings = const [],
     this.toppingPrice = 0.0,
     this.createdAt,
@@ -30,51 +30,56 @@ class CartItem {
   double get totalPrice => (price + toppingPrice) * quantity;
 
   factory CartItem.fromJson(Map<String, dynamic> json) {
-    // Xử lý productId khi là object hoặc string
-    final productInfo = json['productId'] is String 
+    // Handle productId when it's either String or Map
+    final productInfo = json['productId'] is String
         ? {'_id': json['productId']}
-        : json['productId'] ?? {};
-    
-    // Xử lý note với giá trị mặc định
-    final note = json['note'] ?? {};
-    
+        : json['productId'] as Map<String, dynamic>? ?? {};
+
+    // Handle note with default values
+    final note = json['note'] as Map<String, dynamic>? ?? {};
+
+    // Parse dates safely
+    final createdAt = json['createdAt'] != null 
+        ? DateTime.tryParse(json['createdAt'].toString()) 
+        : null;
+    final updatedAt = json['updatedAt'] != null 
+        ? DateTime.tryParse(json['updatedAt'].toString()) 
+        : null;
+
     return CartItem(
       id: json['_id']?.toString() ?? '',
       productId: productInfo['_id']?.toString() ?? '',
       name: productInfo['name']?.toString() ?? 'Unknown Product',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
-      imageUrl: productInfo['imageUrl']?.toString() ?? 'https://via.placeholder.com/150',
+      imageUrl: productInfo['imageUrl']?.toString() ?? 
+          'https://via.placeholder.com/150',
       size: note['size']?.toString() ?? 'M',
-      sugarLevel: note['sugarLevel']?.toString() ?? '50 SL',
+      sugarLevel: note['sugarLevel']?.toString() ?? '50%',
       toppings: List<String>.from(note['toppings'] ?? []),
       toppingPrice: (json['toppingPrice'] as num?)?.toDouble() ?? 0.0,
-      createdAt: json['createdAt'] != null 
-          ? DateTime.tryParse(json['createdAt']) 
-          : null,
-      updatedAt: json['updatedAt'] != null 
-          ? DateTime.tryParse(json['updatedAt']) 
-          : null,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    if (id.isNotEmpty) '_id': id,
-    'productId': productId,
-    'quantity': quantity,
-    'price': price,
-    'note': {
-      'size': size,
-      'sugarLevel': sugarLevel,
-      'toppings': toppings,
-    },
-    'toppingPrice': toppingPrice,
-    if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
-    if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
-  };
+        if (id.isNotEmpty) '_id': id,
+        'productId': productId,
+        'quantity': quantity,
+        'price': price,
+        'note': {
+          'size': size,
+          'sugarLevel': sugarLevel,
+          'toppings': toppings,
+        },
+        'toppingPrice': toppingPrice,
+        if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+        if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+      };
 
-  // Tạo bản sao với các thuộc tính có thể thay đổi
   CartItem copyWith({
+    String? id,
     String? productId,
     String? name,
     double? price,
@@ -84,9 +89,11 @@ class CartItem {
     String? sugarLevel,
     List<String>? toppings,
     double? toppingPrice,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return CartItem(
-      id: id,
+      id: id ?? this.id,
       productId: productId ?? this.productId,
       name: name ?? this.name,
       price: price ?? this.price,
@@ -94,12 +101,41 @@ class CartItem {
       imageUrl: imageUrl ?? this.imageUrl,
       size: size ?? this.size,
       sugarLevel: sugarLevel ?? this.sugarLevel,
-      toppings: toppings ?? this.toppings,
+      toppings: toppings ?? List.from(this.toppings),
       toppingPrice: toppingPrice ?? this.toppingPrice,
-      createdAt: createdAt,
-      updatedAt: updatedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CartItem &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          productId == other.productId &&
+          name == other.name &&
+          price == other.price &&
+          quantity == other.quantity &&
+          imageUrl == other.imageUrl &&
+          size == other.size &&
+          sugarLevel == other.sugarLevel &&
+          toppings.toString() == other.toppings.toString() &&
+          toppingPrice == other.toppingPrice;
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      productId.hashCode ^
+      name.hashCode ^
+      price.hashCode ^
+      quantity.hashCode ^
+      imageUrl.hashCode ^
+      size.hashCode ^
+      sugarLevel.hashCode ^
+      toppings.hashCode ^
+      toppingPrice.hashCode;
 }
 
 class Cart {
@@ -107,6 +143,9 @@ class Cart {
   final String userId;
   final List<CartItem> items;
   final double totalPrice;
+  final String? voucherCode;
+  final double discountAmount;
+  final double finalPrice;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -115,23 +154,75 @@ class Cart {
     required this.userId,
     required this.items,
     required this.totalPrice,
+    this.voucherCode,
+    this.discountAmount = 0.0,
+    this.finalPrice = 0.0,
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory Cart.fromJson(Map<String, dynamic> json) {
+    // Parse dates safely
+    final createdAt = DateTime.parse(json['createdAt'].toString());
+    final updatedAt = DateTime.parse(json['updatedAt'].toString());
+
+    // Calculate final price if not provided
+    final totalPrice = json['totalPrice']?.toDouble() ?? 0.0;
+    final discountAmount = json['discountAmount']?.toDouble() ?? 0.0;
+    final finalPrice = json['finalPrice']?.toDouble() ?? 
+        (totalPrice - discountAmount).clamp(0, double.infinity);
+
     return Cart(
-      id: json['_id'],
-      userId: json['userId'] is String 
-          ? json['userId'] 
-          : json['userId']['_id'] ?? '',
+      id: json['_id'].toString(),
+      userId: json['userId'] is String
+          ? json['userId'].toString()
+          : (json['userId'] as Map<String, dynamic>)['_id']?.toString() ?? '',
       items: (json['products'] as List?)
-              ?.map((item) => CartItem.fromJson(item))
+              ?.map((item) => CartItem.fromJson(item as Map<String, dynamic>))
               .toList() ??
           [],
-      totalPrice: json['totalPrice']?.toDouble() ?? 0.0,
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      totalPrice: totalPrice,
+      voucherCode: json['voucherCode']?.toString(),
+      discountAmount: discountAmount,
+      finalPrice: finalPrice,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        '_id': id,
+        'userId': userId,
+        'products': items.map((item) => item.toJson()).toList(),
+        'totalPrice': totalPrice,
+        if (voucherCode != null) 'voucherCode': voucherCode,
+        'discountAmount': discountAmount,
+        'finalPrice': finalPrice,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
+      };
+
+  Cart copyWith({
+    String? id,
+    String? userId,
+    List<CartItem>? items,
+    double? totalPrice,
+    String? voucherCode,
+    double? discountAmount,
+    double? finalPrice,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return Cart(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      items: items ?? List.from(this.items),
+      totalPrice: totalPrice ?? this.totalPrice,
+      voucherCode: voucherCode ?? this.voucherCode,
+      discountAmount: discountAmount ?? this.discountAmount,
+      finalPrice: finalPrice ?? this.finalPrice,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

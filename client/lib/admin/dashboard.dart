@@ -4,6 +4,7 @@ import 'package:myproject/admin/screen/order_management_screen.dart';
 import 'package:myproject/admin/screen/product_management_screen.dart';
 import 'package:myproject/admin/screen/user_management_screen.dart';
 import 'package:myproject/admin/screen/topping_management_screen.dart';
+import 'package:myproject/admin/screen/voucher_management_screen.dart';
 import 'package:myproject/screen/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -153,12 +154,15 @@ class AdminDashboard extends StatelessWidget {
             ),
             _buildDashboardCard(
               context,
-              Icons.analytics,
-              'Voucher',
-              Colors.teal,
+              Icons.discount,
+              'Voucher Management',
+              Colors.pink,
               () {
-                // Navigate to Analytics
-                _navigateTo(context, 'Voucher');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const VoucherManagementScreen()),
+                );
               },
             ),
           ],

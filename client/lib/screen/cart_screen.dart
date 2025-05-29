@@ -239,12 +239,6 @@ class _CartScreenState extends State<CartScreen> {
         setState(() => _isApplyingVoucher = false);
         return;
       }
-
-      // --- Placeholder for CartService.applyVoucher ---
-      // You need to implement this in your Flutter CartService
-      // It should make a POST request to your backend's /cart/apply-voucher endpoint
-      // The backend should return the updated cart data or at least discount info
-      // Example:
       final response = await http.post(
         Uri.parse(AppConfig.getApiUrl('/cart/apply-voucher')), // Your backend endpoint
         headers: {'Content-Type': 'application/json'},
