@@ -1,44 +1,68 @@
 const OrderModel = require("./../model/orderSchema");
+const VoucherModel = require("./../model/voucherSchema");
 const ToppingModel = require("./../model/toppingSchema");
 
 class OrderService {
   // Thêm đơn hàng
   static async insertOrder(orderData) {
     try {
-      let totalOrderPrice = 0; // Khởi tạo tổng giá của đơn hàng
+      let totalOrderPrice = 0;
 
-      // Xử lý cho từng sản phẩm trong đơn hàng
       for (const product of orderData.products) {
-        // Tính tổng giá của topping cho từng sản phẩm
-        const toppingIds =
-          product.note && product.note.topping ? product.note.topping : [];
+        const toppingIds = product.note?.topping || [];
         const toppings = await ToppingModel.find({ _id: { $in: toppingIds } });
 
-        // Tính tổng giá của topping
-        const toppingPrice = toppings.reduce(
-          (total, topping) => total + topping.price,
-          0
-        );
-
-        // Tính tổng giá của sản phẩm (bao gồm topping)
-        const productTotalPrice =
+        const toppingPrice = toppings.reduce((total, t) => total + t.price, 0);
+        const productTotal =
           product.price * product.quantity + toppingPrice * product.quantity;
 
-        // Cập nhật tổng giá của đơn hàng
-        totalOrderPrice += productTotalPrice;
-
-        // Nếu có topping dưới dạng ID, lấy tên topping
-        product.note.topping = toppings.map((t) => t.name); // Gán lại topping thành mảng tên
+        totalOrderPrice += productTotal;
+        product.note.topping = toppings.map((t) => t.name);
       }
 
-      // Tạo đơn hàng với tổng giá
+      // Áp dụng voucher nếu có
+      let discountAmount = 0;
+      if (orderData.voucher_code) {
+        const voucher = await VoucherModel.findOne({
+          code: orderData.voucher_code,
+        });
+
+        if (!voucher) throw new Error("Voucher không tồn tại");
+        if (voucher.quantity <= voucher.used_count) {
+          throw new Error("Voucher đã hết lượt dùng");
+        }
+        const now = new Date();
+        if (now < voucher.start_date || now > voucher.expiry_date) {
+          // console.log("Hello"); LỖI Ở ĐÂY
+          throw new Error("Voucher không còn hiệu lực");
+        }
+
+        if (voucher.discount_type === "percent") {
+          discountAmount = (totalOrderPrice * voucher.discount_value) / 100;
+          if (voucher.max_discount > 0)
+            discountAmount = Math.min(discountAmount, voucher.max_discount);
+        } else {
+          discountAmount = voucher.discount_value;
+        }
+
+        // Trừ vào tổng đơn
+        totalOrderPrice -= discountAmount;
+        if (totalOrderPrice < 0) totalOrderPrice = 0;
+
+        // Cập nhật used_count
+        voucher.used_count += 1;
+        await voucher.save();
+      }
+
       orderData.total = totalOrderPrice;
+      orderData.voucher_code = orderData.voucher_code || null;
 
       const newOrder = new OrderModel(orderData);
-      const savedOrder = await newOrder.save();
-      return savedOrder;
+      return await newOrder.save();
     } catch (error) {
-      throw new Error("Failed to insert order: " + error.message);
+      throw new Error(
+        "Failed to insert order (order service): " + error.message
+      );
     }
   }
 

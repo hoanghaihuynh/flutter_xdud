@@ -53,7 +53,7 @@ exports.insertOrder = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       status: 500,
-      error: "Có lỗi khi tạo đơn hàng",
+      error: "Có lỗi khi tạo đơn hàng order controller",
       message: error.message,
     });
   }

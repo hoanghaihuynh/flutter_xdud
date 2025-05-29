@@ -38,6 +38,7 @@ const orderSchema = new Schema({
     },
   ],
   total: { type: Number, required: true },
+  voucher_code: { type: String, default: null },
   status: { type: String, default: "pending" },
   payment_method: { type: String },
   paymentInfo: {
