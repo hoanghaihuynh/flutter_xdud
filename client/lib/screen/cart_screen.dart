@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:myproject/screen/orderDetails_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
-import './../models/carts.dart';
+import './../models/carts.dart'; // Assuming Cart model is here
 import './../services/cart_service.dart';
 import './../utils/getUserId.dart';
 import './../utils/formatCurrency.dart';
@@ -23,14 +23,37 @@ class _CartScreenState extends State<CartScreen> {
   String? _errorMessage;
   bool _isProcessingPayment = false;
 
+  // Voucher related state
+  final TextEditingController _voucherController = TextEditingController();
+  String? _appliedVoucherCode;
+  double _discountAmount = 0.0;
+  double _finalPrice = 0.0; // Price after discount
+  bool _isApplyingVoucher = false;
+
   @override
   void initState() {
     super.initState();
-    _fetchCart();
+    _fetchCart().then((_) {
+      _updateFinalPrice(); // Initialize final price after fetching cart
+    });
   }
 
-  // Call api lấy giỏ hàng theo user id
+  @override
+  void dispose() {
+    _voucherController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchCart() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      // Reset voucher details when fetching cart
+      _appliedVoucherCode = null;
+      _discountAmount = 0.0;
+      _voucherController.clear();
+    });
+
     try {
       final userId = await getUserId();
       print('fetch userid trong cart: $userId');
@@ -45,14 +68,16 @@ class _CartScreenState extends State<CartScreen> {
         return;
       }
 
-      final cartItems =
-          await CartService.fetchCartByUserId(userId); // Lỗi trong đây
+      // Assuming fetchCartByUserId returns a List<CartItem> directly for now
+      // If it returns a Cart object, you'll need to adjust
+      final cartItems = await CartService.fetchCartByUserId(userId);
 
       if (mounted) {
         setState(() {
           _cartItems = cartItems;
           _isLoading = false;
           _errorMessage = null;
+          _updateFinalPrice(); // Update final price after cart items are fetched/updated
         });
       }
     } catch (e) {
@@ -61,21 +86,34 @@ class _CartScreenState extends State<CartScreen> {
         setState(() {
           _isLoading = false;
           _errorMessage = 'Error loading cart: ${e.toString()}';
+          _updateFinalPrice();
         });
       }
     }
   }
 
-  // tính tổng giỏ hàng
-  double get totalPrice {
+  double get subtotalPrice {
     return _cartItems.fold(
       0,
-      (sum, item) => sum + (item.price * item.quantity),
+      (sum, item) => sum + (item.price * item.quantity) + (item.toppingPrice * item.quantity), // Include topping price in subtotal
     );
   }
 
-  // Call api xóa sản phẩm khỏi giỏ hàng
+  void _updateFinalPrice() {
+    if (mounted) {
+      setState(() {
+        _finalPrice = subtotalPrice - _discountAmount;
+        if (_finalPrice < 0) {
+          _finalPrice = 0;
+        }
+      });
+    }
+  }
+
   Future<void> _removeItem(String cartItemId, String productId) async {
+    // ... (existing code) ...
+    // After successful removal and _fetchCart():
+    // _fetchCart calls _updateFinalPrice()
     try {
       final userId = await getUserId();
 
@@ -110,7 +148,7 @@ class _CartScreenState extends State<CartScreen> {
           responseData['message'] ?? 'XÓA SẢN PHẨM KHỎI GIỎ HÀNG THÀNH CÔNG',
           isError: false,
         );
-        _fetchCart(); // Refresh cart
+        await _fetchCart(); // Refresh cart and updates final price
       } else {
         _showSnackBar(
           responseData['error'] ?? 'Failed to remove item',
@@ -125,10 +163,11 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  // thay đổi số lượng sp
   Future<void> _updateQuantity(String productId, int quantity) async {
     if (quantity < 1) return;
-
+    // ... (existing code) ...
+    // After successful update and _fetchCart():
+    // _fetchCart calls _updateFinalPrice()
     try {
       final userId = await getUserId();
       if (userId == null) return;
@@ -153,7 +192,7 @@ class _CartScreenState extends State<CartScreen> {
       print('responseData: $responseData');
 
       if (statusCode == 200) {
-        _fetchCart(); // Refresh cart after update
+        await _fetchCart(); // Refresh cart and updates final price
       } else {
         _showSnackBar('Failed to update quantity', isError: true);
       }
@@ -165,8 +204,8 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  // hiển thị thông báo khi thêm xóa sửa thành công
   void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -180,19 +219,95 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  // call api đặt hàng
-  Future<void> _insertOrder({String paymentMethod = "VNPAY"}) async {
+  // Apply voucher
+  Future<void> _applyVoucher() async {
+    final voucherCode = _voucherController.text.trim();
+    if (voucherCode.isEmpty) {
+      _showSnackBar('Please enter a voucher code', isError: true);
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isApplyingVoucher = true;
+    });
+
     try {
+      final userId = await getUserId();
+      if (userId == null || userId.isEmpty) {
+        _showSnackBar('User not logged in', isError: true);
+        setState(() => _isApplyingVoucher = false);
+        return;
+      }
+
+      // --- Placeholder for CartService.applyVoucher ---
+      // You need to implement this in your Flutter CartService
+      // It should make a POST request to your backend's /cart/apply-voucher endpoint
+      // The backend should return the updated cart data or at least discount info
+      // Example:
+      final response = await http.post(
+        Uri.parse(AppConfig.getApiUrl('/cart/apply-voucher')), // Your backend endpoint
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'userId': userId, 'voucher_code': voucherCode}),
+      );
+      final responseData = json.decode(response.body);
+      
+      if (response.statusCode == 200) {
+        final cartData = responseData['data']; // Assuming backend returns cart in 'data'
+        if (mounted) {
+          setState(() {
+            _appliedVoucherCode = cartData['voucher_code'];
+            _discountAmount = (cartData['discount_amount'] ?? 0.0).toDouble();
+            _updateFinalPrice();
+          });
+        }
+       _showSnackBar('Voucher applied successfully!', isError: false);
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to apply voucher');
+      }
+      // --- End of Placeholder ---
+
+      // Simulated API call for now
+      await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
+
+
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _appliedVoucherCode = null;
+          _discountAmount = 0.0;
+          _updateFinalPrice();
+        });
+      }
+      _showSnackBar('Error applying voucher: ${e.toString().replaceAll('Exception: ', '')}', isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isApplyingVoucher = false;
+        });
+      }
+    }
+  }
+
+
+  Future<void> _insertOrder({
+    String paymentMethod = "VNPAY", // Default, can be overridden
+    String? orderId // For VNPAY, orderId might be generated before paymentUrl
+  }) async {
+    try {
+      if (!mounted) return;
       setState(() => _isLoading = true);
       final userId = await getUserId();
 
       if (userId == null || userId.isEmpty) {
         _showSnackBar('Vui lòng đăng nhập', isError: true);
+        if (mounted) setState(() => _isLoading = false);
         return;
       }
 
       if (_cartItems.isEmpty) {
         _showSnackBar('Giỏ hàng trống', isError: true);
+        if (mounted) setState(() => _isLoading = false);
         return;
       }
 
@@ -200,12 +315,12 @@ class _CartScreenState extends State<CartScreen> {
         return {
           "product_id": item.productId,
           "quantity": item.quantity,
-          "price": item.price + item.toppingPrice,
+          "price": item.price, // Original price per unit
+          "toppingPrice": item.toppingPrice, // Topping price per unit
           "note": {
             "size": item.size,
             "sugarLevel": item.sugarLevel,
             "toppings": item.toppings,
-            "toppingPrice": item.toppingPrice,
           }
         };
       }).toList();
@@ -213,40 +328,49 @@ class _CartScreenState extends State<CartScreen> {
       final orderData = {
         "user_id": userId,
         "products": productList,
-        "total": totalPrice,
+        "subtotal": subtotalPrice, // Send original subtotal
+        "discount_amount": _discountAmount, // Send discount
+        "voucher_code": _appliedVoucherCode, // Send applied voucher
+        "total": _finalPrice, // Send final price after discount
         "payment_method": paymentMethod,
-        "status": "pending",
+        "status": "pending", // Initial status
         "created_at": DateTime.now().toIso8601String(),
+        if (orderId != null) "order_id": orderId, // Include if VNPAY generated one
       };
 
-      final response = await http
-          .post(
-            Uri.parse(AppConfig.getApiUrl('/order/insertOrder')),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(orderData),
-          )
-          .timeout(const Duration(seconds: 15));
+      debugPrint('Order Data to be sent: ${jsonEncode(orderData)}');
+
+      final response = await http.post(
+        Uri.parse(AppConfig.getApiUrl('/order/insertOrder')),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(orderData),
+      ).timeout(const Duration(seconds: 20));
 
       final responseData = json.decode(response.body);
-      print('insert order ne: $responseData');
+      print('Insert order response: $responseData');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        _showSnackBar('ĐẶT HÀNG THÀNH CÔNG');
-        await _clearCart();
+        if (paymentMethod != "VNPAY") { // VNPAY has its own redirection
+          _showSnackBar('ĐẶT HÀNG THÀNH CÔNG');
+          await _clearCart(); // Clears cart and resets voucher
+          if (mounted) Navigator.pop(context); // Close payment modal
+        }
+        // For VNPAY, success is handled in _processVNPayPayment after redirection
+        return responseData; // Return data for VNPAY to get paymentUrl
       } else {
         throw responseData['message'] ?? 'Đặt hàng thất bại';
       }
     } catch (e) {
-      _showSnackBar('Lỗi: ${e.toString().replaceAll('Exception: ', '')}',
-          isError: true);
+       _showSnackBar('Lỗi đặt hàng: ${e.toString().replaceAll('Exception: ', '')}', isError: true);
+       rethrow; // Rethrow to be caught by payment processing methods
     } finally {
-      if (mounted) {
+      if (mounted && paymentMethod != "VNPAY") { // VNPAY handles its own loading state
         setState(() => _isLoading = false);
       }
     }
   }
 
-  // Call api clear giỏ hàng
+
   Future<void> _clearCart() async {
     final userId = await getUserId();
     if (userId == null || userId.isEmpty) {
@@ -256,50 +380,77 @@ class _CartScreenState extends State<CartScreen> {
 
     final url = Uri.parse(AppConfig.getApiUrl('/cart/clearCart'));
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'userId': userId}),
-    );
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'userId': userId}),
+      );
 
-    final responseData = json.decode(response.body);
-    if (response.statusCode == 200) {
-      print('Giỏ hàng đã được xóa thành công');
-      _fetchCart(); // refresh UI
-    } else {
-      print('Lỗi khi xóa giỏ hàng: ${responseData['message']}');
+      final responseData = json.decode(response.body);
+      if (response.statusCode == 200) {
+        print('Giỏ hàng đã được xóa thành công');
+        if(mounted) {
+          setState(() {
+            _cartItems = [];
+            _appliedVoucherCode = null;
+            _discountAmount = 0.0;
+            _voucherController.clear();
+            _updateFinalPrice(); // This will set finalPrice to 0
+          });
+        }
+        // _fetchCart(); // This will also reset voucher and update prices
+      } else {
+        print('Lỗi khi xóa giỏ hàng: ${responseData['message']}');
+        _showSnackBar('Lỗi khi xóa giỏ hàng: ${responseData['message']}', isError: true);
+      }
+    } catch (e) {
+       print('Lỗi khi xóa giỏ hàng: $e');
+      _showSnackBar('Lỗi khi xóa giỏ hàng: ${e.toString()}', isError: true);
     }
   }
 
-  // Xử lý thanh toán
   Future<void> _processVNPayPayment() async {
+    // Kiểm tra nếu giỏ hàng trống
+    if (_cartItems.isEmpty) {
+        _showSnackBar('Giỏ hàng trống. Không thể thanh toán.', isError: true);
+        return;
+    }
     try {
       setState(() => _isProcessingPayment = true);
 
       final userId = await getUserId();
       if (userId == null || userId.isEmpty) {
-        _showSnackBar('Please login to continue', isError: true);
+        _showSnackBar('Vui lòng đăng nhập để tiếp tục', isError: true);
+        setState(() => _isProcessingPayment = false); // Thêm dòng này để dừng loading
         return;
       }
 
       // Chuẩn bị dữ liệu đơn hàng
+      // QUAN TRỌNG: Đoạn tạo orderData này nên được thực hiện tập trung trong hàm _insertOrder
+      // Tuy nhiên, để sửa lỗi trực tiếp cho đoạn code bạn cung cấp:
       final productList = _cartItems
           .map((item) => {
                 "product_id": item.productId,
                 "quantity": item.quantity,
-                "price": item.price,
+                "price": item.price, // Giá gốc của sản phẩm
+                // Nếu backend cần giá đã bao gồm topping ở đây, bạn cần điều chỉnh
+                // Hoặc tốt hơn là backend tự tính toán dựa trên product_id và note
               })
           .toList();
 
       final orderData = {
         "user_id": userId,
         "products": productList,
-        "total": totalPrice,
+        "subtotal": subtotalPrice, // Tổng tiền hàng gốc
+        "discount_amount": _discountAmount, // Số tiền giảm giá
+        "voucher_code": _appliedVoucherCode, // Mã voucher đã áp dụng
+        "total": _finalPrice, // SỬ DỤNG _finalPrice THAY CHO totalPrice
         "payment_method": "VNPAY",
-        "status": "pending"
+        "status": "pending" // Trạng thái ban đầu
       };
 
-      // Gọi API tạo đơn hàng
+      // Gọi API tạo đơn hàng (Backend /order/insertOrder cần xử lý các trường mới này)
       final url = Uri.parse(AppConfig.getApiUrl('/order/insertOrder'));
       final response = await http.post(
         url,
@@ -310,86 +461,48 @@ class _CartScreenState extends State<CartScreen> {
       final responseData = json.decode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Lấy paymentUrl từ response
-        final paymentUrl = responseData['data']['paymentUrl'];
-        // print("payment: $paymentUrl");
+        // Lấy paymentUrl từ response (Backend phải trả về paymentUrl trong data)
+        final paymentUrl = responseData['data']?['paymentUrl'];
+
+        if (paymentUrl == null) {
+          throw 'Không nhận được URL thanh toán từ máy chủ.';
+        }
+        print("Payment URL: $paymentUrl");
 
         // Mở trình duyệt để thanh toán
-        if (await canLaunch(paymentUrl)) {
-          await launch(paymentUrl);
-          _showSnackBar('Redirecting to VNPAY...');
-          await _clearCart();
-          Navigator.pop(context); // Đóng modal sau khi chuyển hướng
+        final uri = Uri.parse(paymentUrl); // Chuyển đổi String thành Uri
+        if (await canLaunchUrl(uri)) { // Sử dụng canLaunchUrl
+          await launchUrl(uri, mode: LaunchMode.externalApplication); // Sử dụng launchUrl
+          _showSnackBar('Đang chuyển hướng đến VNPAY...');
+          await _clearCart(); // Xóa giỏ hàng sau khi chuyển hướng
+          if (mounted) Navigator.pop(context); // Đóng modal sau khi chuyển hướng
         } else {
-          throw 'Could not launch payment URL';
+          throw 'Không thể mở URL thanh toán: $paymentUrl';
         }
       } else {
-        throw responseData['message'] ?? 'Failed to create payment';
+        throw responseData['message'] ?? 'Tạo yêu cầu thanh toán thất bại';
       }
     } catch (e) {
-      _showSnackBar('Error: $e', isError: true);
+      _showSnackBar('Lỗi thanh toán VNPAY: ${e.toString().replaceAll('Exception: ', '')}', isError: true);
     } finally {
-      setState(() => _isProcessingPayment = false);
+      if (mounted) { // Kiểm tra mounted trước khi gọi setState
+         setState(() => _isProcessingPayment = false);
+      }
     }
   }
 
   Future<void> _processCashPayment() async {
+    if (_cartItems.isEmpty) {
+        _showSnackBar('Giỏ hàng trống. Không thể đặt hàng.', isError: true);
+        return;
+    }
     try {
       setState(() => _isProcessingPayment = true);
-      final userId = await getUserId();
-
-      if (userId == null || userId.isEmpty) {
-        _showSnackBar('Vui lòng đăng nhập để tiếp tục', isError: true);
-        return;
-      }
-
-      final productList = _cartItems.map((item) {
-        return {
-          "product_id": item.productId,
-          "quantity": item.quantity,
-          "price": item.price + item.toppingPrice, // Bao gồm cả giá topping
-          "note": {
-            "size": item.size,
-            "sugarLevel": item.sugarLevel,
-            "toppings":
-                item.toppings, // Sử dụng trường toppings thay vì toppingIds
-            "toppingPrice": item.toppingPrice,
-          }
-        };
-      }).toList();
-
-      final orderData = {
-        "user_id": userId,
-        "products": productList,
-        "total": totalPrice,
-        "payment_method": "CASH",
-        "status": "pending",
-        "created_at": DateTime.now().toIso8601String(),
-      };
-
-      debugPrint('Order Data: ${jsonEncode(orderData)}');
-
-      final response = await http
-          .post(
-            Uri.parse(AppConfig.getApiUrl('/order/insertOrder')),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(orderData),
-          )
-          .timeout(const Duration(seconds: 15));
-
-      final responseData = json.decode(response.body);
-      print('insert order ne: $responseData');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        _showSnackBar('Tạo đơn hàng thành công. Thanh toán khi nhận hàng');
-        await _clearCart();
-        Navigator.pop(context);
-      } else {
-        throw responseData['message'] ?? 'Tạo đơn hàng thất bại';
-      }
+      await _insertOrder(paymentMethod: "CASH");
+      // _insertOrder handles success message, cart clearing, and modal pop for CASH
     } catch (e) {
-      _showSnackBar('Lỗi: ${e.toString().replaceAll('Exception: ', '')}',
-          isError: true);
+      // Error snackbar is shown in _insertOrder
+      print('Cash payment processing failed: $e');
     } finally {
       if (mounted) {
         setState(() => _isProcessingPayment = false);
@@ -397,15 +510,16 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
+
   void _showPaymentMethodModal() {
     showDialog(
       context: context,
       builder: (context) => PaymentMethodModal(
-        totalAmount: totalPrice,
+        totalAmount: _finalPrice, // Show final price in modal
         onPaymentMethodSelected: (method) async {
           if (method == 'VNPAY') {
             await _processVNPayPayment();
-          } else {
+          } else { // CASH
             await _processCashPayment();
           }
         },
@@ -426,7 +540,6 @@ class _CartScreenState extends State<CartScreen> {
         centerTitle: true,
         elevation: 0,
         actions: [
-          // Icon xem đơn hàng
           IconButton(
             icon: const Icon(Icons.receipt_long),
             onPressed: () async {
@@ -445,10 +558,11 @@ class _CartScreenState extends State<CartScreen> {
             },
             tooltip: 'Xem đơn hàng',
           ),
-          // Icon refresh
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _fetchCart,
+            onPressed: (){
+              _fetchCart();
+            } , // Refresh cart and voucher state
             tooltip: 'Làm mới giỏ hàng',
           ),
         ],
@@ -456,11 +570,20 @@ class _CartScreenState extends State<CartScreen> {
       body: Stack(
         children: [
           _buildMainContent(),
-          if (_isLoading)
+          if (_isLoading || _isApplyingVoucher) // Show loader if general loading or applying voucher
             Container(
               color: Colors.black.withOpacity(0.3),
-              child: const Center(
-                child: CircularProgressIndicator(),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    if (_isApplyingVoucher) ...[
+                      const SizedBox(height: 10),
+                      const Text("Applying Voucher...", style: TextStyle(color: Colors.white, fontSize: 16))
+                    ]
+                  ],
+                )
               ),
             ),
         ],
@@ -469,7 +592,7 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildMainContent() {
-    if (_errorMessage != null) {
+    if (_errorMessage != null && !_isLoading) { // Only show error if not loading
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -502,7 +625,7 @@ class _CartScreenState extends State<CartScreen> {
       );
     }
 
-    if (_cartItems.isEmpty) {
+    if (_cartItems.isEmpty && !_isLoading) { // Only show empty cart if not loading
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -532,7 +655,7 @@ class _CartScreenState extends State<CartScreen> {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(context); // Go back to previous screen
               },
               icon: const Icon(Icons.shopping_bag_outlined),
               label: const Text('Continue Shopping'),
@@ -547,6 +670,9 @@ class _CartScreenState extends State<CartScreen> {
         ),
       );
     }
+    // Don't build list if loading, show loader from Stack
+    if (_isLoading) return const SizedBox.shrink();
+
 
     return Column(
       children: [
@@ -569,6 +695,10 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildCartItem(CartItem item) {
+    // Calculate total price for this specific item including its own topping price and quantity
+    // This is for display per item, not the cart's subtotal
+    double itemDisplayTotalPrice = (item.price + item.toppingPrice) * item.quantity;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -621,8 +751,26 @@ class _CartScreenState extends State<CartScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        formatCurrency(item.price),
+                      Text( // Price per unit without topping for clarity
+                        '${formatCurrency(item.price)} / unit',
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColorDark,
+                          fontSize: 14,
+                        ),
+                      ),
+                      if (item.toppingPrice > 0) ... [
+                        const SizedBox(height: 2),
+                        Text( // Topping price per unit
+                          '+${formatCurrency(item.toppingPrice)} toppings / unit',
+                          style: TextStyle(
+                            color: Colors.blueGrey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                       const SizedBox(height: 4),
+                       Text( // Total for this item line (price + topping) * qty
+                        formatCurrency(itemDisplayTotalPrice),
                         style: TextStyle(
                           color: Theme.of(context).primaryColor,
                           fontWeight: FontWeight.bold,
@@ -635,7 +783,6 @@ class _CartScreenState extends State<CartScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            // Hiển thị thông tin note
             _buildNoteInfo(item),
             const SizedBox(height: 12),
             Row(
@@ -659,10 +806,10 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildNoteInfo(CartItem item) {
-    return Column(
+    // ... (existing code, no changes needed here) ...
+     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Hiển thị size
         if (item.size.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
@@ -678,7 +825,6 @@ class _CartScreenState extends State<CartScreen> {
             ),
           ),
 
-        // Hiển thị mức đường
         if (item.sugarLevel.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
@@ -695,7 +841,6 @@ class _CartScreenState extends State<CartScreen> {
             ),
           ),
 
-        // Hiển thị topping nếu có
         if (item.toppings.isNotEmpty)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -718,17 +863,8 @@ class _CartScreenState extends State<CartScreen> {
                   );
                 }).toList(),
               ),
-              if (item.toppingPrice > 0)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    '+${formatCurrency(item.toppingPrice)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                ),
+              // Topping price per item is already part of item.toppingPrice
+              // It's included in the item's total price calculation
             ],
           ),
       ],
@@ -736,18 +872,23 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildQuantityControl(CartItem item) {
-    final TextEditingController _quantityController = TextEditingController(
+    // ... (existing code, but ensure it calls _updateFinalPrice after _updateQuantity) ...
+    // _updateQuantity now calls _fetchCart which calls _updateFinalPrice
+     final TextEditingController quantityController = TextEditingController(
       text: item.quantity.toString(),
     );
+    // Set cursor to the end of the text
+    quantityController.selection = TextSelection.fromPosition(TextPosition(offset: quantityController.text.length));
+
 
     return Container(
-      width: 100, // Đặt chiều rộng cố định
+      width: 100,
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[300]!),
         borderRadius: BorderRadius.circular(8),
       ),
       child: TextField(
-        controller: _quantityController,
+        controller: quantityController,
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
         decoration: const InputDecoration(
@@ -759,21 +900,16 @@ class _CartScreenState extends State<CartScreen> {
           final newQuantity = int.tryParse(value) ?? item.quantity;
           if (newQuantity > 0 && newQuantity != item.quantity) {
             _updateQuantity(item.productId, newQuantity);
-          } else {
-            // Nếu giá trị không hợp lệ, khôi phục giá trị cũ
-            _quantityController.text = item.quantity.toString();
+          } else if (newQuantity <=0) {
+             _showSnackBar("Số lượng phải lớn hơn 0", isError: true);
+             quantityController.text = item.quantity.toString();
+          }
+           else {
+            quantityController.text = item.quantity.toString();
           }
         },
-        onEditingComplete: () {
-          // Xử lý khi hoàn thành chỉnh sửa (tương tự onSubmitted)
-          final value = _quantityController.text;
-          final newQuantity = int.tryParse(value) ?? item.quantity;
-          if (newQuantity > 0 && newQuantity != item.quantity) {
-            _updateQuantity(item.productId, newQuantity);
-          } else {
-            _quantityController.text = item.quantity.toString();
-          }
-        },
+        // Consider adding onFocusChange or similar to update if user taps away
+        // onEditingComplete is another option, similar to onSubmitted
       ),
     );
   }
@@ -799,6 +935,66 @@ class _CartScreenState extends State<CartScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Voucher Input
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48, // Consistent height
+                      child: TextField(
+                        controller: _voucherController,
+                        decoration: InputDecoration(
+                          hintText: 'Enter Voucher Code',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          suffixIcon: _appliedVoucherCode != null && _voucherController.text == _appliedVoucherCode
+                            ? IconButton(
+                                icon: Icon(Icons.clear, color: Colors.grey[600]),
+                                onPressed: () {
+                                  if(mounted) {
+                                    setState(() {
+                                      _voucherController.clear();
+                                      _appliedVoucherCode = null;
+                                      _discountAmount = 0.0;
+                                      _updateFinalPrice();
+                                    });
+                                  }
+                                   _showSnackBar('Voucher removed.', isError: false);
+                                },
+                              )
+                            : null,
+                        ),
+                        enabled: !_isApplyingVoucher, // Disable while applying
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _isApplyingVoucher || _cartItems.isEmpty ? null : _applyVoucher,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      minimumSize: const Size(0, 48), // Match TextField height
+                    ),
+                    child: _isApplyingVoucher
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white,))
+                        : const Text('Apply'),
+                  ),
+                ],
+              ),
+            ),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -810,7 +1006,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 ),
                 Text(
-                  formatCurrency(totalPrice),
+                  formatCurrency(subtotalPrice),
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -819,6 +1015,32 @@ class _CartScreenState extends State<CartScreen> {
               ],
             ),
             const SizedBox(height: 8),
+            // Discount Row (only if discount is applied)
+            if (_discountAmount > 0 && _appliedVoucherCode != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Discount ($_appliedVoucherCode)',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                    Text(
+                      '-${formatCurrency(_discountAmount)}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -830,7 +1052,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 ),
                 const Text(
-                  'Free',
+                  'Free', // Or calculate shipping if applicable
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -854,7 +1076,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 ),
                 Text(
-                  formatCurrency(totalPrice),
+                  formatCurrency(_finalPrice), // Use final price
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -867,20 +1089,22 @@ class _CartScreenState extends State<CartScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _showPaymentMethodModal,
+                onPressed: _cartItems.isEmpty || _isProcessingPayment ? null : _showPaymentMethodModal,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'Proceed to Checkout',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: _isProcessingPayment
+                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3,))
+                    : const Text(
+                        'Proceed to Checkout',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -889,3 +1113,38 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 }
+
+// Placeholder for CartService.applyVoucher in your Flutter CartService file
+// (e.g., services/cart_service.dart)
+/*
+class CartService {
+  // ... other methods like fetchCartByUserId, removeItem, updateQuantity
+
+  static Future<Map<String, dynamic>> applyVoucher({
+    required String userId,
+    required String voucherCode,
+  }) async {
+    final url = Uri.parse(AppConfig.getApiUrl('/cart/apply-voucher')); // Ensure this endpoint exists on your backend
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'userId': userId, 'voucher_code': voucherCode}),
+      ).timeout(const Duration(seconds: 10));
+
+      final responseData = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        // Assuming backend returns the updated cart object or relevant discount info
+        // Example: { "success": true, "data": { "voucher_code": "CODE", "discount_amount": 5.0, "totalPriceAfterDiscount": 95.0, ... } }
+        return responseData['data']; // Or however your backend structures success response
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to apply voucher');
+      }
+    } catch (e) {
+      print('Error in CartService.applyVoucher: $e');
+      throw Exception('Could not apply voucher: ${e.toString().replaceAll('Exception: ', '')}');
+    }
+  }
+}
+*/

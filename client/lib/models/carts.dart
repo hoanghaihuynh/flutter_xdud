@@ -8,7 +8,7 @@ class CartItem {
   final String size;
   final String sugarLevel;
   final List<String> toppings;
-  final double toppingPrice; // Thêm trường giá topping
+  final double toppingPrice; // Giá topping
 
   CartItem({
     required this.id,
@@ -57,5 +57,49 @@ class CartItem {
           'toppings': toppings,
         },
         'toppingPrice': toppingPrice,
+      };
+}
+
+// Model cho toàn bộ giỏ hàng (Cart) có voucher
+class Cart {
+  final List<CartItem> items;
+  final double totalPrice;
+  final String? voucherCode;       // Mã voucher (có thể null)
+  final double discountAmount;     // Số tiền giảm giá
+  final double finalPrice;         // Giá sau khi trừ voucher
+
+  Cart({
+    required this.items,
+    required this.totalPrice,
+    this.voucherCode,
+    this.discountAmount = 0,
+    required this.finalPrice,
+  });
+
+  factory Cart.fromJson(Map<String, dynamic> json) {
+    var itemsJson = json['products'] as List<dynamic>? ?? [];
+    List<CartItem> items = itemsJson.map((item) => CartItem.fromJson(item)).toList();
+
+    double totalPrice = (json['totalPrice'] ?? 0).toDouble();
+    String? voucherCode = json['voucher_code'];
+    double discountAmount = (json['discount_amount'] ?? 0).toDouble();
+
+    double finalPrice = totalPrice - discountAmount;
+
+    return Cart(
+      items: items,
+      totalPrice: totalPrice,
+      voucherCode: voucherCode,
+      discountAmount: discountAmount,
+      finalPrice: finalPrice < 0 ? 0 : finalPrice,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'products': items.map((item) => item.toJson()).toList(),
+        'totalPrice': totalPrice,
+        'voucher_code': voucherCode,
+        'discount_amount': discountAmount,
+        'finalPrice': finalPrice,
       };
 }

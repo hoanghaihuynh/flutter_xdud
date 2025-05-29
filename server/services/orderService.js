@@ -13,50 +13,52 @@ class OrderService {
         const toppings = await ToppingModel.find({ _id: { $in: toppingIds } });
 
         const toppingPrice = toppings.reduce((total, t) => total + t.price, 0);
+        // console.log(toppingPrice);
         const productTotal =
           product.price * product.quantity + toppingPrice * product.quantity;
 
         totalOrderPrice += productTotal;
+        console.log("productTotal: " + productTotal);
         product.note.topping = toppings.map((t) => t.name);
       }
 
       // Áp dụng voucher nếu có
       let discountAmount = 0;
+      // Áp dụng voucher nếu có
       if (orderData.voucher_code) {
         const voucher = await VoucherModel.findOne({
           code: orderData.voucher_code,
         });
 
         if (!voucher) throw new Error("Voucher không tồn tại");
-        if (voucher.quantity <= voucher.used_count) {
+        if (voucher.quantity <= voucher.used_count)
           throw new Error("Voucher đã hết lượt dùng");
-        }
+
         const now = new Date();
-        if (now < voucher.start_date || now > voucher.expiry_date) {
-          // console.log("Hello"); LỖI Ở ĐÂY
+        if (now < voucher.start_date || now > voucher.expiry_date)
           throw new Error("Voucher không còn hiệu lực");
-        }
 
         if (voucher.discount_type === "percent") {
           discountAmount = (totalOrderPrice * voucher.discount_value) / 100;
-          if (voucher.max_discount > 0)
+          if (voucher.max_discount > 0) {
             discountAmount = Math.min(discountAmount, voucher.max_discount);
+          }
         } else {
           discountAmount = voucher.discount_value;
         }
 
-        // Trừ vào tổng đơn
+        console.log("Discount amount:", discountAmount);
+
         totalOrderPrice -= discountAmount;
         if (totalOrderPrice < 0) totalOrderPrice = 0;
 
-        // Cập nhật used_count
         voucher.used_count += 1;
         await voucher.save();
       }
 
       orderData.total = totalOrderPrice;
       orderData.voucher_code = orderData.voucher_code || null;
-
+      console.log("order data: " + orderData.total);
       const newOrder = new OrderModel(orderData);
       return await newOrder.save();
     } catch (error) {

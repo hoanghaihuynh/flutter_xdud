@@ -151,16 +151,16 @@ class AdminDashboard extends StatelessWidget {
                 );
               },
             ),
-            // _buildDashboardCard(
-            //   context,
-            //   Icons.analytics,
-            //   'Reports & Analytics',
-            //   Colors.teal,
-            //   () {
-            //     // Navigate to Analytics
-            //     _navigateTo(context, 'Analytics');
-            //   },
-            // ),
+            _buildDashboardCard(
+              context,
+              Icons.analytics,
+              'Voucher',
+              Colors.teal,
+              () {
+                // Navigate to Analytics
+                _navigateTo(context, 'Voucher');
+              },
+            ),
           ],
         ),
       ),
