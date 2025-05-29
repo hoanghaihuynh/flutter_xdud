@@ -1,6 +1,7 @@
 const Cart = require("./../model/cartSchema");
 const Product = require("./../model/productSchema");
 const Topping = require("./../model/toppingSchema");
+const Voucher = require("./../model/voucherSchema");
 
 class CartService {
   // Lấy danh sách toàn bộ giỏ hàng
@@ -22,7 +23,6 @@ class CartService {
     sugarLevel,
     toppingIds
   ) {
-
     // Kiểm tra nếu size và sugarLevel không có, trả về lỗi
     if (!size || !sugarLevel) {
       throw new Error("Thiếu size hoặc sugarLevel cho sản phẩm");
@@ -179,6 +179,44 @@ class CartService {
     cart.products = [];
     cart.totalPrice = 0;
     await cart.save();
+    return cart;
+  }
+
+  // Áp dụng voucher vào giỏ hàng
+  static async applyVoucherToCart(userId, voucher_code) {
+    // Tìm giỏ hàng theo userId
+    const cart = await Cart.findOne({ userId });
+    if (!cart) throw new Error("Giỏ hàng không tồn tại");
+
+    // Tìm voucher theo code
+    const voucher = await Voucher.findOne({ code: voucher_code });
+    if (!voucher) throw new Error("Voucher không tồn tại");
+
+    const now = new Date();
+    if (now < voucher.start_date || now > voucher.expiry_date)
+      throw new Error("Voucher không còn hiệu lực");
+
+    if (voucher.used_count >= voucher.quantity)
+      throw new Error("Voucher đã được sử dụng hết");
+
+    // Tính giá trị giảm giá
+    let discountAmount = 0;
+    if (voucher.discount_type === "percent") {
+      discountAmount = (cart.totalPrice * voucher.discount_value) / 100;
+      if (voucher.max_discount > 0) {
+        discountAmount = Math.min(discountAmount, voucher.max_discount);
+      }
+    } else if (voucher.discount_type === "fixed") {
+      discountAmount = voucher.discount_value;
+    }
+
+    // Cập nhật cart
+    cart.voucher_code = voucher_code;
+    cart.discount_amount = discountAmount;
+    cart.totalPriceAfterDiscount = cart.totalPrice - discountAmount;
+
+    await cart.save();
+
     return cart;
   }
 }

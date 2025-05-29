@@ -32,6 +32,9 @@ const cartSchema = new Schema(
       },
     ],
     totalPrice: { type: Number, required: true, default: 0 },
+    // Voucher
+    voucher_code: { type: String, default: null }, // Thêm trường voucher_code
+    discount_amount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

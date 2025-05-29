@@ -94,3 +94,28 @@ exports.clearCart = async (req, res) => {
     res.status(500).json({ status: 500, error: error.message });
   }
 };
+
+// Áp dụng voucher vào cửa hàng
+exports.applyVoucher = async (req, res) => {
+  try {
+    const { userId, voucher_code } = req.body;
+
+    if (!userId || !voucher_code) {
+      return res.status(400).json({ status: 400, error: "Thiếu userId hoặc voucher_code" });
+    }
+
+    const updatedCart = await cartService.applyVoucherToCart(userId, voucher_code);
+
+    res.status(200).json({
+      status: 200,
+      message: "Áp dụng voucher thành công",
+      data: updatedCart,
+    });
+  } catch (error) {
+    res.status(400).json({
+      status: 400,
+      error: error.message,
+    });
+  }
+};
+

@@ -7,5 +7,6 @@ router.post("/cart/insertCart", CartController.insertCart);
 router.delete("/cart/removeProduct", CartController.removeProductFromCart);
 router.put("/cart/updateCartQuantity", CartController.updateCartQuantity);
 router.post("/cart/clearCart", CartController.clearCart);
+router.post("/cart/apply-voucher", CartController.applyVoucher);
 
 module.exports = router;
