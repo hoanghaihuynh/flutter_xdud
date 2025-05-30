@@ -1,4 +1,5 @@
 import './../../models/orders.dart';
+import '../../models/payment.dart';
 
 class Order {
   final String id;
@@ -8,6 +9,9 @@ class Order {
   final String status;
   final DateTime createdAt;
   final String? paymentMethod;
+  final PaymentInfo? paymentInfo;
+  final String? tableId; // <<--- THÊM TRƯỜNG NÀY
+  final String? tableNumber; // <<--- THÊM TRƯỜNG NÀY
 
   Order({
     required this.id,
@@ -17,39 +21,26 @@ class Order {
     required this.status,
     required this.createdAt,
     this.paymentMethod,
+    this.paymentInfo,
+    this.tableId, // <<--- THÊM VÀO CONSTRUCTOR
+    this.tableNumber, // <<--- THÊM VÀO CONSTRUCTOR
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
-    try {
-      return Order(
-        id: json['_id'] ?? '',
-        user: User.fromJson(json['user_id'] ?? {}),
-        products: List<OrderProduct>.from((json['products'] as List? ?? [])
-            .map((x) => OrderProduct.fromJson(x))),
-        total: (json['total'] as num?)?.toDouble() ?? 0.0,
-        status: json['status']?.toString() ?? 'pending',
-        createdAt: DateTime.parse(
-            json['created_at'] ?? DateTime.now().toIso8601String()),
-        paymentMethod: json['payment_method']?.toString(),
-      );
-    } catch (e) {
-      print('Error parsing Order: $e\nJSON: $json');
-      rethrow;
-    }
-  }
-
-  Order copyWith({
-    String? status,
-    String? paymentMethod,
-  }) {
     return Order(
-      id: id,
-      user: user,
-      products: products,
-      total: total,
-      status: status ?? this.status,
-      createdAt: createdAt,
-      paymentMethod: paymentMethod ?? this.paymentMethod,
+      id: json['_id'],
+      user: User.fromJson(json['user_id']),
+      products: List<OrderProduct>.from(
+          json['products'].map((x) => OrderProduct.fromJson(x))),
+      total: (json['total'] as num).toDouble(),
+      status: json['status'],
+      createdAt: DateTime.parse(json['created_at']),
+      paymentMethod: json['payment_method'] as String?,
+      paymentInfo: json['paymentInfo'] != null
+          ? PaymentInfo.fromJson(json['paymentInfo'])
+          : null,
+      tableId: json['table_id'] as String?, // <<--- PARSE TỪ JSON
+      tableNumber: json['table_number'] as String?, // <<--- PARSE TỪ JSON
     );
   }
 }

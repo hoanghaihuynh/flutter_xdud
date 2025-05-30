@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
 import './../utils/formatCurrency.dart';
 import './../models/orders.dart';
 import './../services/order_service.dart';
+import 'package:printing/printing.dart'; // Import package printing
+import 'dart:typed_data'; // Để dùng Uint8List
+import './../utils/pdf_generator.dart';
 
 class OrderListScreen extends StatefulWidget {
   final String userId;
@@ -55,8 +59,44 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
 class OrderCard extends StatelessWidget {
   final Order order;
+  final InvoiceService _invoiceService = InvoiceService();
 
-  const OrderCard({Key? key, required this.order}) : super(key: key);
+  OrderCard({Key? key, required this.order}) : super(key: key);
+
+  Future<void> _printInvoice(BuildContext context, Order currentOrder) async {
+    // Hiển thị loading (tùy chọn)
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()));
+    // print('OK NE'); OK
+
+    try {
+      // print('OK NE'); OK
+      final Uint8List pdfBytes =
+          await _invoiceService.generateInvoicePdf(currentOrder);
+
+      Navigator.pop(context); // Tắt loading dialog
+
+      // Sử dụng package printing để hiển thị print dialog
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdfBytes,
+        name:
+            'HoaDon_${currentOrder.id.substring(currentOrder.id.length - 6)}.pdf', // Tên file mặc định khi lưu/chia sẻ
+      );
+
+      // Hoặc nếu bạn muốn chia sẻ file PDF:
+      // await Printing.sharePdf(bytes: pdfBytes, filename: 'HoaDon_${currentOrder.id}.pdf');
+    } catch (e) {
+      print("PDF ga: $e");
+      Navigator.pop(context); // Tắt loading dialog nếu có lỗi
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Lỗi khi tạo hóa đơn PDF: $e'),
+            backgroundColor: Colors.red),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -127,6 +167,27 @@ class OrderCard extends StatelessWidget {
               'Items:',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
+
+            const SizedBox(height: 16),
+            const Divider(),
+            // Nút In Hóa Đơn
+            if (order.status.toLowerCase() == 'completed' ||
+                order.status.toLowerCase() == 'pending' ||
+                order.status.toLowerCase() ==
+                    'occupied') // Ví dụ: Chỉ cho in khi đơn hàng đã hoàn thành hoặc đang chờ xử lý
+              Center(
+                // Đặt nút ở giữa hoặc vị trí bạn muốn
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.print_outlined),
+                  label: const Text('In Hóa Đơn'),
+                  onPressed: () => {_printInvoice(context, order)},
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Theme.of(context).primaryColor, // Màu nút
+                      foregroundColor: Colors.white // Màu chữ
+                      ),
+                ),
+              ),
             const SizedBox(height: 8),
             ...order.products.map((item) => Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
