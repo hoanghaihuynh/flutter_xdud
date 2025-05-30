@@ -288,8 +288,7 @@ class _CartScreenState extends State<CartScreen> {
     final voucherCode = _voucherController.text.trim();
     setState(() => _isApplyingVoucher = true);
     try {
-      final responseData =
-          await _voucherService.applyVoucher(voucherCode); 
+      final responseData = await _voucherService.applyVoucher(voucherCode);
       final cartData = responseData['data'];
       if (mounted) {
         setState(() {
