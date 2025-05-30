@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import './../services/voucher_service.dart';
 import 'package:myproject/screen/orderDetails_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
@@ -24,8 +25,8 @@ class _CartScreenState extends State<CartScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   bool _isProcessingPayment = false;
+  final VoucherService _voucherService = VoucherService();
 
-  // State voucher
   final TextEditingController _voucherController = TextEditingController();
   String? _appliedVoucherCode;
   double _discountAmount = 0.0;
@@ -285,67 +286,32 @@ class _CartScreenState extends State<CartScreen> {
   // Apply voucher
   Future<void> _applyVoucher() async {
     final voucherCode = _voucherController.text.trim();
-    if (voucherCode.isEmpty) {
-      _showSnackBar('Please enter a voucher code', isError: true);
-      return;
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _isApplyingVoucher = true;
-    });
-
+    setState(() => _isApplyingVoucher = true);
     try {
-      final userId = await getUserId();
-      if (userId == null || userId.isEmpty) {
-        _showSnackBar('User not logged in', isError: true);
-        setState(() => _isApplyingVoucher = false);
-        return;
+      final responseData =
+          await _voucherService.applyVoucher(voucherCode); 
+      final cartData = responseData['data'];
+      if (mounted) {
+        setState(() {
+          _appliedVoucherCode = cartData['voucher_code'];
+          _discountAmount = (cartData['discount_amount'] ?? 0.0).toDouble();
+          _updateFinalPrice();
+          _isApplyingVoucher = false;
+        });
       }
-      final response = await http.post(
-        Uri.parse(AppConfig.getApiUrl(
-            '/cart/apply-voucher')), // Your backend endpoint
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'userId': userId, 'voucher_code': voucherCode}),
-      );
-      final responseData = json.decode(response.body);
-
-      if (response.statusCode == 200) {
-        final cartData =
-            responseData['data']; // Assuming backend returns cart in 'data'
-        if (mounted) {
-          setState(() {
-            _appliedVoucherCode = cartData['voucher_code'];
-            _discountAmount = (cartData['discount_amount'] ?? 0.0).toDouble();
-            _updateFinalPrice();
-          });
-        }
-        _showSnackBar('Voucher applied successfully!', isError: false);
-      } else {
-        throw Exception(responseData['message'] ?? 'Failed to apply voucher');
-      }
-      // --- End of Placeholder ---
-
-      // Simulated API call for now
-      await Future.delayed(
-          const Duration(seconds: 1)); // Simulate network delay
+      _showSnackBar('Voucher applied successfully!', isError: false);
     } catch (e) {
       if (mounted) {
         setState(() {
           _appliedVoucherCode = null;
           _discountAmount = 0.0;
           _updateFinalPrice();
+          _isApplyingVoucher = false;
         });
       }
       _showSnackBar(
           'Error applying voucher: ${e.toString().replaceAll('Exception: ', '')}',
           isError: true);
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isApplyingVoucher = false;
-        });
-      }
     }
   }
 

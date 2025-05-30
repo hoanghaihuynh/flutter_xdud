@@ -61,23 +61,23 @@ class _TableScreenState extends State<TableScreen> {
                   Navigator.pop(ctx);
                   _confirmAndBookTable(table);
                 }));
-            actions.add(ListTile(
-                leading: const Icon(Icons.bookmark_add_outlined,
-                    color: Colors.orangeAccent),
-                title: const Text('Chuyển sang "Reserved"'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _changeTableStatus(
-                      table, 'reserved', 'Đã chuyển trạng thái bàn');
-                }));
-            actions.add(ListTile(
-                leading: const Icon(Icons.build_outlined, color: Colors.grey),
-                title: const Text('Chuyển sang "Maintenance"'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _changeTableStatus(
-                      table, 'maintenance', 'Đã chuyển trạng thái bàn');
-                }));
+            // actions.add(ListTile(
+            //     leading: const Icon(Icons.bookmark_add_outlined,
+            //         color: Colors.orangeAccent),
+            //     title: const Text('Chuyển sang "Reserved"'),
+            //     onTap: () {
+            //       Navigator.pop(ctx);
+            //       _changeTableStatus(
+            //           table, 'reserved', 'Đã chuyển trạng thái bàn');
+            //     }));
+            // actions.add(ListTile(
+            //     leading: const Icon(Icons.build_outlined, color: Colors.grey),
+            //     title: const Text('Chuyển sang "Maintenance"'),
+            //     onTap: () {
+            //       Navigator.pop(ctx);
+            //       _changeTableStatus(
+            //           table, 'maintenance', 'Đã chuyển trạng thái bàn');
+            //     }));
             break;
           case 'occupied':
             actions.add(ListTile(

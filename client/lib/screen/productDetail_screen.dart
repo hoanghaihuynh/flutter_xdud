@@ -292,9 +292,6 @@ class _ProductDetailState extends State<ProductDetail> {
       ],
     );
   }
-
-  // Hàm giả định để lấy tên topping từ ID (thay bằng service thực tế)
-
   // Thay thế hàm _getToppingName bằng cách lấy từ map
   String _getToppingName(String toppingId) {
     return _toppingNames[toppingId] ?? 'Topping $toppingId';
