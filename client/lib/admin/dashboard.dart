@@ -6,6 +6,7 @@ import 'package:myproject/admin/screen/user_management_screen.dart';
 import 'package:myproject/admin/screen/topping_management_screen.dart';
 import 'package:myproject/admin/screen/voucher_management_screen.dart';
 import 'package:myproject/screen/login_screen.dart';
+import 'package:myproject/screen/table_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -162,6 +163,18 @@ class AdminDashboard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                       builder: (context) => const VoucherManagementScreen()),
+                );
+              },
+            ),
+            _buildDashboardCard(
+              context,
+              Icons.table_bar,
+              'Tables Management',
+              Colors.blueAccent,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TableScreen()),
                 );
               },
             ),

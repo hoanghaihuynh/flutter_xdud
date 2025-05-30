@@ -67,8 +67,7 @@ class TableService {
       final response = await http.put(
         uri,
         headers: <String, String>{
-          'Content-Type':
-              'application/json; charset=UTF-8', 
+          'Content-Type': 'application/json; charset=UTF-8',
         },
         body: jsonEncode(updateData), // Chuyển đổi Map thành chuỗi JSON
       );
@@ -89,6 +88,88 @@ class TableService {
       // Xử lý lỗi mạng hoặc lỗi parse JSON
       print('TableService: Error updating table: $e');
       throw Exception('Error updating table: $e');
+    }
+  }
+
+  // CALL API InsertTable
+  Future<TableModel> insertTable({
+    required String tableNumber,
+    required int capacity,
+    required String description,
+    required String status,
+  }) async {
+    final Uri uri = Uri.parse(AppConfig.getApiUrl('/table/insertTable'));
+    print('TableService: Calling POST $uri');
+
+    // Chuẩn bị dữ liệu body cho request
+    final Map<String, dynamic> requestBody = {
+      'table_number': tableNumber,
+      'capacity': capacity,
+      'description': description,
+      'status': status,
+    };
+
+    try {
+      final response = await http.post(
+        uri,
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(requestBody), // Mã hóa body thành chuỗi JSON
+      );
+
+      // In ra response để debug (bạn có thể xóa hoặc comment lại sau)
+      print(
+          'TableService: InsertTable Response Status: ${response.statusCode}');
+      print('TableService: InsertTable Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Thường POST thành công trả về 201 (Created) hoặc 200
+        // API trả về đối tượng JSON chứa thông tin bàn mới
+        final Map<String, dynamic> responseData =
+            jsonDecode(utf8.decode(response.bodyBytes));
+
+        // Kiểm tra xem response có chứa key "newTable" không
+        if (responseData.containsKey('newTable') &&
+            responseData['newTable'] != null) {
+          // Lấy object "newTable" từ response
+          final Map<String, dynamic> newTableJson =
+              responseData['newTable'] as Map<String, dynamic>;
+          return TableModel.fromJson(newTableJson);
+        } else {
+          // Nếu response không đúng định dạng mong đợi
+          print(
+              'TableService: Lỗi - Response JSON không chứa "newTable" hoặc "newTable" là null.');
+          throw Exception(
+              'Failed to insert table: Invalid response format from server.');
+        }
+      } else {
+        // Xử lý các lỗi HTTP khác
+        print(
+            'TableService: Failed to insert table. Status code: ${response.statusCode}');
+        print('TableService: Response body: ${response.body}');
+        // Cố gắng parse lỗi từ server nếu có
+        String errorMessage =
+            'Failed to insert table (Status code: ${response.statusCode})';
+        try {
+          final Map<String, dynamic> errorData =
+              jsonDecode(utf8.decode(response.bodyBytes));
+          if (errorData.containsKey('message')) {
+            // Giả sử server trả về lỗi trong trường 'message'
+            errorMessage += ': ${errorData['message']}';
+          } else {
+            errorMessage += '. Response: ${response.body}';
+          }
+        } catch (e) {
+          // Không parse được lỗi JSON, dùng response.body
+          errorMessage += '. Response: ${response.body}';
+        }
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      // Xử lý lỗi mạng hoặc lỗi parse JSON
+      print('TableService: Error inserting table: $e');
+      throw Exception('Error inserting table: $e');
     }
   }
 
@@ -128,6 +209,60 @@ class TableService {
       // Bạn có thể log lỗi hoặc throw một Exception tùy chỉnh.
       print('Error fetching available tables: $e');
       throw Exception('Error fetching available tables: $e');
+    }
+  }
+
+  // Xóa bàn
+  Future<Map<String, dynamic>> deleteTable(String tableId) async {
+    final Uri uri =
+        Uri.parse(AppConfig.getApiUrl('/table/deleteTable/$tableId'));
+    print('TableService: Calling DELETE $uri');
+
+    try {
+      final response = await http.delete(
+        uri,
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+          // Thêm các headers cần thiết khác, ví dụ: Authorization token nếu API yêu cầu
+          // 'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+        },
+      );
+
+      // In ra response để debug
+      print(
+          'TableService: DeleteTable Response Status: ${response.statusCode}');
+      print('TableService: DeleteTable Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        // API của bạn trả về 200 khi thành công
+        // API trả về một đối tượng JSON chứa message và data (bàn đã xóa)
+        final Map<String, dynamic> responseData =
+            jsonDecode(utf8.decode(response.bodyBytes));
+        return responseData; // Trả về toàn bộ response data để UI có thể dùng message hoặc data
+      } else {
+        // Xử lý các lỗi HTTP khác
+        print(
+            'TableService: Failed to delete table. Status code: ${response.statusCode}');
+        print('TableService: Response body: ${response.body}');
+        String errorMessage =
+            'Failed to delete table (Status code: ${response.statusCode})';
+        try {
+          final Map<String, dynamic> errorData =
+              jsonDecode(utf8.decode(response.bodyBytes));
+          if (errorData.containsKey('message')) {
+            errorMessage += ': ${errorData['message']}';
+          } else {
+            errorMessage += '. Response: ${response.body}';
+          }
+        } catch (e) {
+          errorMessage += '. Response: ${response.body}';
+        }
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      // Xử lý lỗi mạng hoặc lỗi parse JSON
+      print('TableService: Error deleting table: $e');
+      throw Exception('Error deleting table: $e');
     }
   }
 }
