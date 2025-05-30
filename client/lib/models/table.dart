@@ -17,14 +17,7 @@ class TableModel {
     required this.updatedAt,
   });
 
-  // Factory constructor để tạo một TableModel từ JSON
-  // API trả về JSON với key dạng snake_case
-  // models/table_model.dart
-  // models/table_model.dart
   factory TableModel.fromJson(Map<String, dynamic> json) {
-    // Các hàm _parseString, _parseDateTime, _parseInt giữ nguyên như phiên bản chi tiết trước
-
-    // Hàm trợ giúp để lấy String an toàn
     String _parseString(Map<String, dynamic> data, String key) {
       final value = data[key];
       if (value is String) return value;
@@ -92,9 +85,6 @@ class TableModel {
     }
   }
 
-  // Phương thức để chuyển đổi TableModel thành một Map JSON
-  // Hữu ích khi bạn cần gửi dữ liệu lên server (ví dụ: POST, PUT)
-  // Sẽ trả về JSON với key dạng snake_case để nhất quán với server
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {
       'table_number': tableNumber,
@@ -105,9 +95,6 @@ class TableModel {
     if (description != null) {
       data['description'] = description;
     }
-    // Thông thường, 'id' (_id), 'createdAt', 'updatedAt' không được gửi khi tạo mới
-    // hoặc được server tự quản lý, nên không cần thiết phải đưa vào đây
-    // trừ khi API của bạn có yêu cầu đặc biệt.
     return data;
   }
 }

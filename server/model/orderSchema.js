@@ -48,6 +48,16 @@ const orderSchema = new Schema({
     payDate: { type: String },
   },
   created_at: { type: Date, default: Date.now },
+  table_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "tables", // Tên collection chứa danh sách các bàn của bạn
+    default: null, // Hoặc bỏ default nếu không phải lúc nào cũng có (ví dụ: đơn hàng mang đi)
+  },
+  table_number: {
+    type: String,
+    default: null, // Tương tự như table_id
+    trim: true, // Loại bỏ khoảng trắng thừa
+  },
 });
 
 const OrderSchema = db.model("orders", orderSchema);

@@ -3,7 +3,7 @@
 import 'dart:convert'; // Để sử dụng jsonEncode và jsonDecode
 import 'package:http/http.dart' as http; // Import thư viện http
 import 'package:myproject/config/config.dart';
-import './../models/table.dart'; // Đường dẫn tới file table_model.dart của bạn
+import './../models/table.dart';
 
 class TableService {
   // Lấy tất cả các bàn
@@ -68,7 +68,7 @@ class TableService {
         uri,
         headers: <String, String>{
           'Content-Type':
-              'application/json; charset=UTF-LOWERCASE_U_T_F8', // Sửa thành 'application/json; charset=UTF-8'
+              'application/json; charset=UTF-8', 
         },
         body: jsonEncode(updateData), // Chuyển đổi Map thành chuỗi JSON
       );
@@ -89,6 +89,45 @@ class TableService {
       // Xử lý lỗi mạng hoặc lỗi parse JSON
       print('TableService: Error updating table: $e');
       throw Exception('Error updating table: $e');
+    }
+  }
+
+  // Lấy DS bàn còn trống
+  Future<List<TableModel>> getAvailableTables() async {
+    final Uri url = Uri.parse(AppConfig.getApiUrl('/table/getAllTables'));
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-T_8',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // API trả về danh sách JSON, giải mã nó
+        final List<dynamic> decodedJson =
+            json.decode(utf8.decode(response.bodyBytes));
+        // Chuyển đổi danh sách dynamic thành danh sách TableModel
+        List<TableModel> tables = decodedJson
+            .map((jsonItem) => TableModel.fromJson(jsonItem))
+            .toList();
+        // Lọc chỉ lấy những bàn 'available' (nếu API chưa tự lọc)
+        // Nếu API đã trả về đúng danh sách bàn 'available' thì dòng filter này không cần thiết.
+        // List<TableModel> availableTables = tables.where((table) => table.status == 'available').toList();
+        // return availableTables;
+        return tables; // Trả về toàn bộ danh sách nếu API đã tự lọc
+      } else {
+        // Xử lý các trường hợp lỗi khác (ví dụ: 404, 500)
+        // Bạn có thể throw một Exception cụ thể hơn để UI có thể xử lý.
+        throw Exception(
+            'Failed to load tables. Status code: ${response.statusCode}, Body: ${response.body}');
+      }
+    } catch (e) {
+      // Xử lý lỗi kết nối hoặc các lỗi khác trong quá trình gọi API
+      // Bạn có thể log lỗi hoặc throw một Exception tùy chỉnh.
+      print('Error fetching available tables: $e');
+      throw Exception('Error fetching available tables: $e');
     }
   }
 }

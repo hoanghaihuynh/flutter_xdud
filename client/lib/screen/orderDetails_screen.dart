@@ -61,7 +61,9 @@ class OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.all(8.0),
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+      elevation: 2.0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -71,7 +73,7 @@ class OrderCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Order #${order.id.substring(0, 8)}',
+                  'Order #${order.id.length > 8 ? order.id.substring(order.id.length - 8) : order.id}', // Lấy 8 ký tự cuối hoặc toàn bộ ID nếu ngắn hơn
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -80,123 +82,126 @@ class OrderCard extends StatelessWidget {
                 Chip(
                   label: Text(
                     order.status.toUpperCase(),
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
                   ),
-                  backgroundColor: order.status == 'pending'
-                      ? Colors.orange
-                      : order.status == 'completed'
-                          ? Colors.green
-                          : Colors.grey,
+                  backgroundColor: order.status.toLowerCase() == 'pending'
+                      ? Colors.orange.shade700
+                      : order.status.toLowerCase() == 'completed'
+                          ? Colors.green.shade700
+                          : order.status.toLowerCase() == 'cancelled'
+                              ? Colors.red.shade700
+                              : Colors.grey.shade700,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Date: ${DateFormat('dd/MM/yyyy HH:mm').format(order.createdAt.toLocal())}',
-              style: const TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Email: ${order.user.email}',
-              style: const TextStyle(color: Colors.grey),
-            ),
-            if (order.paymentMethod != null)
-              Text(
-                'Payment Method: ${order.paymentMethod!.toUpperCase()}',
-                style: const TextStyle(color: Colors.grey),
-              ),
+            const SizedBox(height: 10),
+            InfoRow(
+                icon: Icons.calendar_today,
+                text: DateFormat('dd/MM/yyyy HH:mm')
+                    .format(order.createdAt.toLocal())),
+            // InfoRow(icon: Icons.email, text: order.user.email), // Email có thể không cần thiết ở đây nếu đã có trong tài khoản người dùng
+
+            // === HIỂN THỊ TÊN BÀN ===
+            if (order.tableNumber != null && order.tableNumber!.isNotEmpty) ...[
+              const SizedBox(height: 4), // Thêm khoảng cách nhỏ
+              InfoRow(
+                  icon: Icons.table_restaurant_outlined,
+                  text: 'Table: ${order.tableNumber}',
+                  highlight: true),
+            ],
+            // === KẾT THÚC HIỂN THỊ TÊN BÀN ===
+
+            if (order.paymentMethod != null) ...[
+              const SizedBox(height: 4),
+              InfoRow(
+                  icon: Icons.payment,
+                  text: 'Payment: ${order.paymentMethod!.toUpperCase()}'),
+            ],
             const SizedBox(height: 16),
             const Text(
               'Items:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
+            const SizedBox(height: 8),
             ...order.products.map((item) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  padding: const EdgeInsets.only(bottom: 12.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('${item.quantity}x '),
-                          Expanded(child: Text(item.product.name)),
+                          Text('${item.quantity}x ',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
+                          Expanded(
+                            child: Text(
+                              item.product.name,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
-                            formatCurrency(item.price),
+                            // Hiển thị tổng tiền cho dòng sản phẩm này (giá * số lượng)
+                            formatCurrency(item.price * item.quantity),
+                            style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
-                      // Hiển thị thông tin size và sugar level
+                      // Hiển thị thông tin size, sugar level, toppings
                       if (item.note.size.isNotEmpty ||
                           item.note.sugarLevel.isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Row(
-                            children: [
-                              if (item.note.size.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 12),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.straighten,
-                                          size: 16, color: Colors.grey),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        item.note.size,
-                                        style: const TextStyle(
-                                            fontSize: 14, color: Colors.grey),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              if (item.note.sugarLevel.isNotEmpty)
-                                Row(
-                                  children: [
-                                    const Icon(Icons.local_drink_outlined,
-                                        size: 16, color: Colors.grey),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      item.note.sugarLevel
-                                          .replaceAll(' SL', '%'),
-                                      style: const TextStyle(
-                                          fontSize: 14, color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                            ],
+                          padding: const EdgeInsets.only(
+                              top: 4, left: 10), // Thụt vào một chút
+                          child: Text(
+                            "${item.note.size.isNotEmpty ? 'Size: ${item.note.size}' : ''}${item.note.size.isNotEmpty && item.note.sugarLevel.isNotEmpty ? ', ' : ''}${item.note.sugarLevel.isNotEmpty ? 'Sugar: ${item.note.sugarLevel.replaceAll(' SL', '%')}' : ''}",
+                            style: const TextStyle(
+                                fontSize: 13, color: Colors.black54),
                           ),
                         ),
-                      // Hiển thị topping nếu có
                       if (item.note.toppings.isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.only(top: 4, left: 10),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'Topping:',
-                                style:
-                                    TextStyle(fontSize: 14, color: Colors.grey),
+                                'Toppings:',
+                                style: TextStyle(
+                                    fontSize: 13, color: Colors.black54),
                               ),
-                              const SizedBox(height: 4),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 4,
-                                children: item.note.toppings.map((topping) {
-                                  return Chip(
-                                    label: Text(topping),
-                                    backgroundColor: Colors.grey[200],
-                                    labelStyle: const TextStyle(fontSize: 12),
-                                    visualDensity: VisualDensity.compact,
-                                  );
-                                }).toList(),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(left: 10.0, top: 2.0),
+                                child: Wrap(
+                                  spacing: 6,
+                                  runSpacing: 0,
+                                  children: item.note.toppings.map((topping) {
+                                    return Text(
+                                      '• $topping', // Thêm dấu chấm đầu dòng
+                                      style: const TextStyle(
+                                          fontSize: 12, color: Colors.black54),
+                                    );
+                                  }).toList(),
+                                ),
                               ),
+                              // Hiển thị tổng tiền topping cho dòng sản phẩm này (giá topping * số lượng)
                               if (item.note.toppingPrice > 0)
                                 Padding(
-                                  padding: const EdgeInsets.only(top: 4),
+                                  padding:
+                                      const EdgeInsets.only(top: 2, left: 10.0),
                                   child: Text(
-                                    '+${formatCurrency(item.note.toppingPrice)}',
+                                    '+ ${formatCurrency(item.note.toppingPrice * item.quantity)} (toppings)',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: Theme.of(context).primaryColor,
+                                      color: Theme.of(context).primaryColorDark,
                                     ),
                                   ),
                                 ),
@@ -206,25 +211,68 @@ class OrderCard extends StatelessWidget {
                     ],
                   ),
                 )),
-            const Divider(),
+            const Divider(height: 16, thickness: 1),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'Total:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
                 Text(
                   formatCurrency(order.total),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    fontSize: 20,
+                    color: Theme.of(context).primaryColor,
                   ),
                 )
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final bool highlight;
+
+  const InfoRow({
+    Key? key,
+    required this.icon,
+    required this.text,
+    this.highlight = false,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        children: [
+          Icon(icon,
+              size: 16,
+              color: highlight
+                  ? Theme.of(context).primaryColorDark
+                  : Colors.grey.shade700),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: highlight
+                    ? Theme.of(context).primaryColorDark
+                    : Colors.grey.shade700,
+                fontSize: 14,
+                fontWeight: highlight ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

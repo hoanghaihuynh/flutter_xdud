@@ -4,12 +4,14 @@ import './payment.dart';
 class Order {
   final String id;
   final User user;
-  final List<OrderProduct> products; // Đổi từ ProductItem sang OrderProduct
+  final List<OrderProduct> products;
   final double total;
   final String status;
   final DateTime createdAt;
   final String? paymentMethod;
   final PaymentInfo? paymentInfo;
+  final String? tableId; // <<--- THÊM TRƯỜNG NÀY
+  final String? tableNumber; // <<--- THÊM TRƯỜNG NÀY
 
   Order({
     required this.id,
@@ -20,6 +22,8 @@ class Order {
     required this.createdAt,
     this.paymentMethod,
     this.paymentInfo,
+    this.tableId, // <<--- THÊM VÀO CONSTRUCTOR
+    this.tableNumber, // <<--- THÊM VÀO CONSTRUCTOR
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -28,13 +32,15 @@ class Order {
       user: User.fromJson(json['user_id']),
       products: List<OrderProduct>.from(
           json['products'].map((x) => OrderProduct.fromJson(x))),
-      total: json['total'].toDouble(),
+      total: (json['total'] as num).toDouble(),
       status: json['status'],
       createdAt: DateTime.parse(json['created_at']),
-      paymentMethod: json['payment_method'],
+      paymentMethod: json['payment_method'] as String?,
       paymentInfo: json['paymentInfo'] != null
           ? PaymentInfo.fromJson(json['paymentInfo'])
           : null,
+      tableId: json['table_id'] as String?, // <<--- PARSE TỪ JSON
+      tableNumber: json['table_number'] as String?, // <<--- PARSE TỪ JSON
     );
   }
 }
