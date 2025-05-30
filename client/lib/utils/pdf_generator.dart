@@ -35,8 +35,8 @@ class InvoiceService {
     );
 
     // Thông tin nhà hàng/cửa hàng (Bạn có thể lấy từ config hoặc hardcode)
-    const String storeName = "Tên Nhà Hàng/Cửa Hàng Của Bạn";
-    const String storeAddress = "123 Đường ABC, Phường XYZ, Quận KLM, TP. HCM";
+    const String storeName = "COFFEE SHOP";
+    const String storeAddress = "180 Đường Cao Lỗ, Phường 4, Quận 8, TP. HCM";
     const String storePhone = "0123 456 789";
     // final Uint8List? logoBytes = (await rootBundle.load('assets/images/logo.png')).buffer.asUint8List(); // Ví dụ load logo
 
