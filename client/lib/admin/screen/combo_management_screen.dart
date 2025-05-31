@@ -12,7 +12,7 @@ class ComboManagementScreen extends StatefulWidget {
 
 class _ComboManagementScreenState extends State<ComboManagementScreen> {
   late Future<List<Combo>> _futureCombos;
-  final ApiService _apiService = ApiService();
+  final ComboService _apiService = ComboService();
 
   @override
   void initState() {

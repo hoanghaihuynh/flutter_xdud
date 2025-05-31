@@ -1,8 +1,5 @@
-// File: models/combo_model.dart
-
 import 'dart:convert';
 
-// Model cho một sản phẩm con bên trong một đối tượng Combo (từ API)
 class ProductItem {
   final String id;
   final String name;
@@ -14,9 +11,9 @@ class ProductItem {
   final String imageUrl;
   final List<String> size;
   final List<String> sugarLevel;
-  final List<String> toppings; // Danh sách ID của topping
-  final DateTime? createdAt; // Có thể có hoặc không trong API response
-  final int? v; // __v, có thể có hoặc không
+  final List<String> toppings;
+  final DateTime? createdAt;
+  final int? v;
 
   ProductItem({
     required this.id,
@@ -83,16 +80,12 @@ class ProductItem {
   }
 }
 
-// Model cho đối tượng Combo chính (từ API)
-// Bạn có thể đặt tên là `ApiCombo` nếu muốn phân biệt rõ ràng hơn
-// với class `Product` (đại diện combo) trong `ShopScreen`.
 class Combo {
   final String id;
   final String name;
   final String description;
-  final double price; // Giá của cả combo
-  final List<ProductItem>
-      products; // Danh sách các sản phẩm con (dùng ProductItem ở trên)
+  final double price;
+  final List<ProductItem> products;
   final String imageUrl;
   final DateTime createdAt;
   final DateTime updatedAt;

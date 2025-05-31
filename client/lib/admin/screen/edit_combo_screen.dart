@@ -29,7 +29,7 @@ class _EditComboScreenState extends State<EditComboScreen> {
   bool _isLoadingProducts = false; // Trạng thái tải sản phẩm thường
 
   bool _isSubmitting = false; // Trạng thái khi đang submit form
-  final ApiService _apiService = ApiService();
+  final ComboService _apiService = ComboService();
   final ProductService _productService =
       ProductService(); // Service cho sản phẩm thường
 

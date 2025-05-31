@@ -7,6 +7,7 @@ import './../services/product_service.dart';
 import './../services/combo_service.dart';
 import './../widgets/coffee_card.dart';
 import './cart_screen.dart';
+import './comboDetail_screen.dart';
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({Key? key}) : super(key: key);
@@ -18,12 +19,13 @@ class ShopScreen extends StatefulWidget {
 class _ShopScreenState extends State<ShopScreen> {
   String selectedCategory = 'All';
   List<Product> filteredItems = [];
-  List<Product> allDisplayableItems = []; // Sẽ chứa cả Product thường và Combo (đã adapt)
+  List<Product> allDisplayableItems = [];
+  List<Combo> _fetchedCombos = [];
   bool isLoading = true;
   String? userId;
 
   final ProductService _productService = ProductService();
-  final ApiService _apiService = ApiService(); // Service để gọi API combo
+  final ComboService _apiService = ComboService(); // Service để gọi API combo
   final TextEditingController _searchController = TextEditingController();
 
   // Danh sách categories (có thể lấy từ productCategories trong models/products.dart nếu bạn muốn)
@@ -66,31 +68,33 @@ class _ShopScreenState extends State<ShopScreen> {
       isLoading = true;
     });
     try {
-      // Gọi API lấy sản phẩm thường và API lấy combo đồng thời
       final results = await Future.wait([
-        _productService.fetchAllProducts(), // Trả về List<Product>
-        _apiService.getAllCombos(),       // Trả về List<Combo> (tên class Combo theo file combo_model.dart)
+        _productService.fetchAllProducts(),
+        _apiService.getAllCombos(),
       ]);
 
       final List<Product> regularProducts = results[0] as List<Product>;
-      final List<Combo> fetchedApiCombos = results[1] as List<Combo>; // Sử dụng class Combo từ model
+      final List<Combo> fetchedApiCombos = results[1] as List<Combo>;
 
-      // Chuyển đổi List<Combo> (từ API) thành List<Product> (model hiển thị)
+      // Lưu lại danh sách Combo gốc
+      _fetchedCombos = fetchedApiCombos; // <--- LƯU LẠI
+
       List<Product> comboAsProducts = fetchedApiCombos.map((apiCombo) {
-        // Sử dụng factory Product.fromApiCombo đã định nghĩa trong models/products.dart
+        // Giả sử Product.fromApiCombo gán category là 'Combo' và isCombo là true
         return Product.fromApiCombo(apiCombo);
       }).toList();
 
       if (!mounted) return;
       setState(() {
         allDisplayableItems = [...regularProducts, ...comboAsProducts];
-        // Sắp xếp (tùy chọn, ví dụ theo tên hoặc để combo lên đầu)
-        // allDisplayableItems.sort((a, b) {
-        //   if (a.isCombo && !b.isCombo) return -1;
-        //   if (!a.isCombo && b.isCombo) return 1;
-        //   return a.name.compareTo(b.name);
-        // });
-        _applyFilterAndSearch(); // Áp dụng filter và search hiện tại
+        // Tùy chọn sắp xếp: đưa Combo lên đầu nếu category là 'Combo'
+        allDisplayableItems.sort((a, b) {
+          if (a.category == 'Combo' && b.category != 'Combo') return -1;
+          if (a.category != 'Combo' && b.category == 'Combo') return 1;
+          return a.name
+              .compareTo(b.name); // Sắp xếp theo tên cho các mục còn lại
+        });
+        _applyFilterAndSearch();
         isLoading = false;
       });
     } catch (error) {
@@ -98,12 +102,12 @@ class _ShopScreenState extends State<ShopScreen> {
       if (mounted) {
         setState(() {
           isLoading = false;
-          // filteredItems và allDisplayableItems có thể rỗng để UI hiển thị "Không có sản phẩm"
           filteredItems = [];
           allDisplayableItems = [];
+          _fetchedCombos = []; // Reset cả list combo gốc
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load data: ${error.toString()}')),
+          SnackBar(content: Text('Không thể tải dữ liệu: ${error.toString()}')),
         );
       }
     }
@@ -143,22 +147,16 @@ class _ShopScreenState extends State<ShopScreen> {
     _applyFilterAndSearch();
   }
 
-  void _searchProducts(String query) {
-    // Việc gọi _applyFilterAndSearch đã được thực hiện trong filterByCategory
-    // và sẽ được gọi mỗi khi text thay đổi.
-    // Nếu bạn muốn search hoạt động độc lập với category filter khi query thay đổi,
-    // thì gọi _applyFilterAndSearch ở đây.
-    // Hiện tại, hàm này đang được gọi bởi onChanged của TextField,
-    // nên nó sẽ tự động cập nhật filteredItems dựa trên query MỚI NHẤT và selectedCategory HIỆN TẠI.
-    _applyFilterAndSearch();
-  }
+  // void _searchProducts(String query) {
+  //   _applyFilterAndSearch();
+  // }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Cửa Hàng'), // Đổi title nếu muốn
+        title: const Text('Cửa Hàng'),
         centerTitle: true,
         actions: [
           IconButton(
@@ -182,7 +180,8 @@ class _ShopScreenState extends State<ShopScreen> {
                     padding: const EdgeInsets.all(16.0),
                     child: TextField(
                       controller: _searchController,
-                      onChanged: _searchProducts, // Sẽ gọi _applyFilterAndSearch
+                      // onChanged đã được xử lý bởi listener _onSearchChanged
+                      // onChanged: _searchProducts,
                       decoration: InputDecoration(
                         hintText: 'Tìm kiếm sản phẩm, combo...',
                         prefixIcon: const Icon(Icons.search),
@@ -197,7 +196,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                 icon: const Icon(Icons.clear),
                                 onPressed: () {
                                   _searchController.clear();
-                                  _searchProducts(''); // Gọi để cập nhật lại list
+                                  // _applyFilterAndSearch(); // Listener sẽ tự động gọi
                                 },
                               )
                             : null,
@@ -209,25 +208,28 @@ class _ShopScreenState extends State<ShopScreen> {
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: displayCategories.length,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12), // Giảm padding một chút
                       itemBuilder: (context, index) {
                         final category = displayCategories[index];
+                        final bool isSelected = selectedCategory == category;
                         return GestureDetector(
                           onTap: () => filterByCategory(category),
                           child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 4), // Giảm margin
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8), // Thêm vertical padding
+                                horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: selectedCategory == category
-                                  ? Theme.of(context).primaryColor // Sử dụng màu chủ đạo
+                              color: isSelected
+                                  ? Theme.of(context).primaryColor
                                   : Colors.white,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                  color: selectedCategory == category
+                                  color: isSelected
                                       ? Theme.of(context).primaryColor
                                       : Colors.grey.shade300),
-                              boxShadow: selectedCategory == category
+                              boxShadow: isSelected
                                   ? [
                                       BoxShadow(
                                         color: Theme.of(context)
@@ -237,16 +239,23 @@ class _ShopScreenState extends State<ShopScreen> {
                                         offset: const Offset(0, 2),
                                       )
                                     ]
-                                  : [],
+                                  : [
+                                      BoxShadow(
+                                        // Thêm shadow nhẹ cho nút không được chọn
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 3,
+                                        offset: const Offset(0, 1),
+                                      )
+                                    ],
                             ),
                             child: Center(
                               child: Text(
                                 category,
                                 style: TextStyle(
-                                  color: selectedCategory == category
+                                  color: isSelected
                                       ? Colors.white
                                       : Colors.black87,
-                                  fontWeight: selectedCategory == category
+                                  fontWeight: isSelected
                                       ? FontWeight.bold
                                       : FontWeight.normal,
                                 ),
@@ -257,48 +266,88 @@ class _ShopScreenState extends State<ShopScreen> {
                       },
                     ),
                   ),
+                  const SizedBox(height: 10), // Thêm khoảng cách nhỏ
                   Expanded(
                     child: filteredItems.isEmpty && !isLoading
                         ? Center(
                             child: Padding(
-                              padding: const EdgeInsets.all(20.0),
-                              child: Text(
-                                'Không tìm thấy sản phẩm nào cho danh mục "$selectedCategory"${_searchController.text.isNotEmpty ? ' với từ khóa "${_searchController.text}"' : ''}.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                              ),
-                            ))
+                            padding: const EdgeInsets.all(20.0),
+                            child: Text(
+                              'Không tìm thấy sản phẩm nào cho danh mục "$selectedCategory"${_searchController.text.isNotEmpty ? ' với từ khóa "${_searchController.text}"' : ''}.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 16, color: Colors.grey[600]),
+                            ),
+                          ))
                         : GridView.builder(
                             padding: const EdgeInsets.all(16),
                             gridDelegate:
                                 const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
-                              childAspectRatio: 0.65, // Bạn có thể cần điều chỉnh tỷ lệ này
+                              childAspectRatio: 0.65, // Điều chỉnh nếu cần
                               crossAxisSpacing: 16,
                               mainAxisSpacing: 16,
                             ),
                             itemCount: filteredItems.length,
                             itemBuilder: (context, index) {
-                              final productOrCombo = filteredItems[index];
+                              final productOrComboAdapter =
+                                  filteredItems[index];
+
+                              // --- LOGIC ĐIỀU HƯỚNG ĐẾN COMBO DETAIL ---
                               return GestureDetector(
                                 onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ProductDetail(
-                                        // ProductDetail cần được cập nhật để xử lý isCombo
-                                        // và hiển thị detailedComboItems nếu là combo
-                                        product: productOrCombo,
-                                        userId: userId ?? '',
+                                  // Kiểm tra xem item có phải là combo không
+                                  // Dựa trên category hoặc trường isCombo trong model Product của bạn
+                                  if (productOrComboAdapter.category == 'Combo'
+                                      // Hoặc: productOrComboAdapter.isCombo == true (nếu bạn có trường này)
+                                      ) {
+                                    // Tìm Combo gốc từ _fetchedCombos
+                                    Combo? originalCombo =
+                                        _fetchedCombos.firstWhere(
+                                            (c) =>
+                                                c.id ==
+                                                productOrComboAdapter.id,
+                                            orElse: () =>
+                                                null_combo_sentinel // Trả về một giá trị đặc biệt nếu không tìm thấy
+                                            );
+
+                                    if (originalCombo != null &&
+                                        originalCombo != null_combo_sentinel) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              ComboDetailScreen(
+                                                  combo: originalCombo),
+                                        ),
+                                      );
+                                    } else {
+                                      // Xử lý trường hợp không tìm thấy Combo gốc (không nên xảy ra nếu logic đúng)
+                                      debugPrint(
+                                          'Original combo not found for ID: ${productOrComboAdapter.id}');
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'Lỗi: Không tìm thấy chi tiết combo.')),
+                                      );
+                                    }
+                                  } else {
+                                    // Nếu không phải combo, điều hướng đến ProductDetail
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ProductDetail(
+                                          product: productOrComboAdapter,
+                                          userId: userId ?? '',
+                                        ),
                                       ),
-                                    ),
-                                  );
+                                    );
+                                  }
                                 },
                                 child: CoffeeCard(
-                                  product: productOrCombo,
+                                  product: productOrComboAdapter,
                                   userId: userId ?? '',
-                                  // CoffeeCard cũng có thể cần cập nhật để hiển thị
-                                  // dấu hiệu "Combo" nếu productOrCombo.isCombo là true
                                 ),
                               );
                             },
@@ -309,4 +358,15 @@ class _ShopScreenState extends State<ShopScreen> {
             ),
     );
   }
+
+  final Combo null_combo_sentinel = Combo(
+      id: '__null_sentinel__',
+      name: '',
+      description: '',
+      price: 0,
+      products: [],
+      imageUrl: '',
+      createdAt: DateTime(0),
+      updatedAt: DateTime(0),
+      v: 0);
 }

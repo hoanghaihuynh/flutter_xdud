@@ -4,7 +4,7 @@ import 'package:myproject/models/inserted_combo_data.dart';
 import 'dart:convert';
 import '../models/combo_model.dart';
 
-class ApiService {
+class ComboService {
   // Hàm lấy tất cả combo
   Future<List<Combo>> getAllCombos() async {
     final response = await http.get(
@@ -23,10 +23,6 @@ class ApiService {
         throw Exception('Failed to parse combos: $e');
       }
     } else {
-      // Nếu server không trả về response OK,
-      // thì ném ra một exception.
-      // print('Failed to load combos. Status code: ${response.statusCode}');
-      // print('Response body: ${response.body}');
       throw Exception(
           'Failed to load combos (Status Code: ${response.statusCode})');
     }
