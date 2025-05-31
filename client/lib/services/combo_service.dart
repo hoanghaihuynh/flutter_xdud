@@ -7,9 +7,13 @@ import '../models/combo_model.dart';
 class ComboService {
   // Hàm lấy tất cả combo
   Future<List<Combo>> getAllCombos() async {
+    // Endpoint đã được cung cấp: http://localhost:3000/combo/getAllCombo
+    // AppConfig.getApiUrl('/combo/getAllCombo') sẽ tạo ra URL này
+    final String url = AppConfig.getApiUrl('/combo/getAllCombo');
+    print('Fetching combos from: $url'); // Log URL để kiểm tra
+
     final response = await http.get(
-      Uri.parse(AppConfig.getApiUrl(
-          '/combo/getAllCombo')), // Ghép endpoint vào base URL
+      Uri.parse(url),
       headers: {
         'Content-Type': 'application/json; charset=UTF-8',
       },
@@ -17,14 +21,22 @@ class ComboService {
 
     if (response.statusCode == 200) {
       try {
+        // response.body là chuỗi JSON nhận được từ API
+        // Hàm parseCombos (định nghĩa ở trên hoặc trong combo_model.dart) sẽ xử lý nó
         return parseCombos(response.body);
       } catch (e) {
-        print('Error parsing combos: $e');
-        throw Exception('Failed to parse combos: $e');
+        // Lỗi xảy ra trong quá trình parse (ví dụ: trong Combo.fromJson hoặc ComboProductConfig.fromJson)
+        print('Error parsing combos in getAllCombos service: $e');
+        print('Response body was: ${response.body}');
+        // Ném lại lỗi để lớp gọi có thể xử lý (ví dụ: hiển thị thông báo lỗi trên UI)
+        throw Exception('Không thể xử lý dữ liệu combo nhận được: $e');
       }
     } else {
+      // Lỗi từ server (ví dụ: 404 Not Found, 500 Internal Server Error)
+      print(
+          'Failed to load combos. Status: ${response.statusCode}, Body: ${response.body}');
       throw Exception(
-          'Failed to load combos (Status Code: ${response.statusCode})');
+          'Không thể tải danh sách combo (Mã lỗi: ${response.statusCode})');
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:myproject/models/combo_product_config_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import './../models/products.dart';
 import './../models/combo_model.dart';
@@ -360,13 +361,17 @@ class _ShopScreenState extends State<ShopScreen> {
   }
 
   final Combo null_combo_sentinel = Combo(
-      id: '__null_sentinel__',
-      name: '',
-      description: '',
-      price: 0,
-      products: [],
-      imageUrl: '',
-      createdAt: DateTime(0),
-      updatedAt: DateTime(0),
-      v: 0);
+    id: '__null_sentinel__',
+    name: 'Invalid Combo Sentinel', // Có thể đặt tên rõ ràng hơn
+    description: 'This is a sentinel value for a non-existent combo.',
+    price: 0.0, // Sử dụng 0.0 cho kiểu double
+    products: const <ComboProductConfigItem>[], // Danh sách rỗng với đúng kiểu
+    // Hoặc: products: List<ComboProductConfig>.empty(growable: false),
+    imageUrl: '', // Hoặc một URL placeholder nếu bạn có
+    category: 'SENTINEL', // Cung cấp giá trị cho trường bắt buộc 'category'
+    isActive: false, // Cung cấp giá trị cho trường bắt buộc 'isActive'
+    createdAt: DateTime.fromMillisecondsSinceEpoch(0), // Hoặc DateTime(1970)
+    updatedAt: DateTime.fromMillisecondsSinceEpoch(0), // Hoặc DateTime(1970)
+    v: 0, // Giữ nguyên hoặc có thể là null nếu v là int?
+  );
 }

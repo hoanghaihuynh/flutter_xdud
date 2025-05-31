@@ -106,31 +106,6 @@ class _ComboManagementScreenState extends State<ComboManagementScreen> {
     }
   }
 
-  // Giả sử bạn có hàm cập nhật trạng thái combo trong ApiService
-  // Future<void> _toggleComboActiveStatus(Combo combo, bool isActive) async {
-  //   try {
-  //     // TODO: Gọi API để cập nhật trạng thái combo. Ví dụ:
-  //     // await _apiService.updateComboStatus(combo.id, isActive);
-  //     // Sau khi thành công, tải lại danh sách hoặc cập nhật item cụ thể
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //           content: Text(
-  //               'Đã ${isActive ? "kích hoạt" : "hủy kích hoạt"} combo "${combo.name}" (giả lập)')),
-  //     );
-  //     // Để UI cập nhật ngay lập tức mà không cần gọi lại API (nếu API thành công)
-  //     // bạn có thể cập nhật trạng thái của đối tượng combo trong list và setState.
-  //     // Tuy nhiên, gọi lại _loadCombos() đảm bảo dữ liệu luôn mới nhất.
-  //     _loadCombos();
-  //   } catch (e) {
-  //     if (mounted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('Lỗi cập nhật trạng thái: $e')),
-  //       );
-  //       // Đảo ngược lại switch nếu API thất bại (tùy chọn)
-  //     }
-  //   }
-  // }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

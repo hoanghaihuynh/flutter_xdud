@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:myproject/models/combo_product_config_item.dart';
+
 class ProductItem {
   final String id;
   final String name;
@@ -80,16 +82,44 @@ class ProductItem {
   }
 }
 
+class ComboProductItemInput {
+  final String productId;
+  final int quantityInCombo;
+  final String defaultSize;
+  final String defaultSugarLevel;
+  final List<String> defaultToppings; // Danh sách ID của topping
+
+  ComboProductItemInput({
+    required this.productId,
+    required this.quantityInCombo,
+    required this.defaultSize,
+    required this.defaultSugarLevel,
+    required this.defaultToppings,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'productId': productId,
+      'quantityInCombo': quantityInCombo,
+      'defaultSize': defaultSize,
+      'defaultSugarLevel': defaultSugarLevel,
+      'defaultToppings': defaultToppings,
+    };
+  }
+}
+
 class Combo {
   final String id;
   final String name;
   final String description;
-  final double price;
-  final List<ProductItem> products;
+  final double price; // JSON là int, nhưng double linh hoạt hơn ở Dart
+  final List<ComboProductConfigItem> products;
   final String imageUrl;
+  final String category;
+  final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final int v; // __v
+  final int? v; // __v có thể không luôn luôn cần thiết
 
   Combo({
     required this.id,
@@ -98,29 +128,45 @@ class Combo {
     required this.price,
     required this.products,
     required this.imageUrl,
+    required this.category,
+    required this.isActive,
     required this.createdAt,
     required this.updatedAt,
-    required this.v,
+    this.v,
   });
 
   factory Combo.fromJson(Map<String, dynamic> json) {
-    var productListJson = json['products'] as List<dynamic>? ??
-        []; // Xử lý nếu 'products' có thể null
-    List<ProductItem> productsData = productListJson
-        .map((pJson) => ProductItem.fromJson(pJson as Map<String, dynamic>))
+    var productListJson = json['products'] as List<dynamic>? ?? [];
+    List<ComboProductConfigItem> productsData = productListJson
+        .map((pJson) =>
+            ComboProductConfigItem.fromJson(pJson as Map<String, dynamic>))
         .toList();
 
+    DateTime _parseSafeDateTime(String? dateString, {DateTime? defaultValue}) {
+      if (dateString == null || dateString.isEmpty) {
+        return defaultValue ??
+            DateTime.now(); // Hoặc throw lỗi nếu trường này bắt buộc
+      }
+      try {
+        return DateTime.parse(dateString);
+      } catch (e) {
+        print("Error parsing date string '$dateString': $e");
+        return defaultValue ?? DateTime.now(); // Fallback
+      }
+    }
+
     return Combo(
-      id: json['_id'] as String,
+      id: json['_id'] as String? ?? '', // Luôn xử lý null
       name: json['name'] as String? ?? 'Unknown Combo',
       description: json['description'] as String? ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       products: productsData,
-      imageUrl: json['imageUrl'] as String? ??
-          'https://via.placeholder.com/200', // URL ảnh mặc định cho combo
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      v: json['__v'] as int? ?? 0,
+      imageUrl: json['imageUrl'] as String? ?? 'https://via.placeholder.com/200',
+      category: json['category'] as String? ?? 'N/A',
+      isActive: json['isActive'] as bool? ?? false,
+      createdAt: _parseSafeDateTime(json['createdAt'] as String?),
+      updatedAt: _parseSafeDateTime(json['updatedAt'] as String?),
+      v: json['__v'] as int?,
     );
   }
 
@@ -137,7 +183,11 @@ class Combo {
       '__v': v,
     };
   }
+
+  
 }
+
+
 
 class DeleteResponseMessage {
   final String message;
@@ -162,18 +212,17 @@ DeleteResponseMessage parseDeleteResponseMessage(String responseBody) {
 List<Combo> parseCombos(String responseBody) {
   try {
     final parsed = json.decode(responseBody);
-    if (parsed is List) {
-      return parsed
-          .cast<Map<String, dynamic>>()
-          .map<Combo>((jsonMap) => Combo.fromJson(jsonMap))
-          .toList();
-    } else {
-      // Xử lý trường hợp response không phải là một mảng JSON
-      print("Error: Expected a List of combos but got ${parsed.runtimeType}");
-      return []; // hoặc throw Exception('Invalid combo list format');
+    if (parsed == null || parsed is! List) { // Kiểm tra null và kiểu List
+        print("Error: Expected a List of combos but received: ${parsed?.runtimeType}");
+        return []; // Trả về rỗng nếu không phải List
     }
+    return parsed
+        .cast<Map<String, dynamic>>() // Ép kiểu từng phần tử sang Map
+        .map<Combo>((jsonMap) => Combo.fromJson(jsonMap))
+        .toList();
   } catch (e) {
-    print("Error parsing combos JSON: $e");
-    throw Exception('Failed to parse combos: $e');
+    print("Error in parseCombos: $e");
+    print("Response body that caused error: $responseBody");
+    throw Exception('Failed to parse list of combos: $e');
   }
 }

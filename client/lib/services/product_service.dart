@@ -13,10 +13,7 @@ class ProductService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
-
-        // Xử lý cả 2 trường hợp response trả về:
-        // 1. Danh sách products trực tiếp
-        // 2. Object có thuộc tính 'products'
+        // print('prodct ne: $data'); OK
         List<dynamic> productsJson =
             data is List ? data : data['products'] ?? [];
 

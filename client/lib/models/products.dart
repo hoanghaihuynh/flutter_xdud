@@ -1,4 +1,5 @@
 import 'package:myproject/models/combo_model.dart';
+import 'package:myproject/models/combo_product_config_item.dart';
 
 class Product {
   final String id;
@@ -14,7 +15,7 @@ class Product {
 
   // --- THÊM CÁC TRƯỜNG SAU ---
   final bool isCombo;
-  final List<ProductItem>? detailedComboItems; // Danh sách các sản phẩm con trong combo
+    final List<ComboProductConfigItem>? detailedComboItems;  // Danh sách các sản phẩm con trong combo
 
   Product({
     required this.id,
