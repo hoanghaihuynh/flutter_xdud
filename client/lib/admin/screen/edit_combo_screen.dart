@@ -1,11 +1,13 @@
 // File: screens/admin/edit_combo_screen.dart
 import 'package:flutter/material.dart';
-import '../../models/combo_model.dart'; // Model Combo và ProductItem
-import '../../models/inserted_combo_data.dart'; // Model cho response của insert/update
-import '../../services/combo_service.dart'; // Service của bạn
+import '../../models/combo_model.dart';
+// import '../../models/inserted_combo_data.dart';
+import '../../models/products.dart';
+import '../../services/combo_service.dart';
+import '../../services/product_service.dart';
 
 class EditComboScreen extends StatefulWidget {
-  final Combo? initialCombo; // Combo hiện tại để sửa, null nếu là tạo mới
+  final Combo? initialCombo;
 
   const EditComboScreen({Key? key, this.initialCombo}) : super(key: key);
 
@@ -19,27 +21,35 @@ class _EditComboScreenState extends State<EditComboScreen> {
   late TextEditingController _descriptionController;
   late TextEditingController _priceController;
   late TextEditingController _imageUrlController;
-  List<String> _selectedProductIds = []; // Sẽ lưu ID các sản phẩm được chọn cho combo
 
-  bool _isLoading = false;
+  // Danh sách ID sản phẩm được chọn cho combo hiện tại
+  List<String> _selectedProductIdsForCombo = [];
+  // Danh sách tất cả sản phẩm thường có sẵn để chọn
+  List<Product> _availableRegularProducts = [];
+  bool _isLoadingProducts = false; // Trạng thái tải sản phẩm thường
+
+  bool _isSubmitting = false; // Trạng thái khi đang submit form
   final ApiService _apiService = ApiService();
+  final ProductService _productService =
+      ProductService(); // Service cho sản phẩm thường
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.initialCombo?.name ?? '');
-    _descriptionController = TextEditingController(text: widget.initialCombo?.description ?? '');
-    _priceController = TextEditingController(text: widget.initialCombo?.price.toString() ?? '');
-    _imageUrlController = TextEditingController(text: widget.initialCombo?.imageUrl ?? '');
+    _nameController =
+        TextEditingController(text: widget.initialCombo?.name ?? '');
+    _descriptionController =
+        TextEditingController(text: widget.initialCombo?.description ?? '');
+    _priceController = TextEditingController(
+        text: widget.initialCombo?.price.toString() ?? '');
+    _imageUrlController =
+        TextEditingController(text: widget.initialCombo?.imageUrl ?? '');
 
     if (widget.initialCombo != null) {
-      // Lấy danh sách ID sản phẩm từ combo ban đầu
-      _selectedProductIds = widget.initialCombo!.products.map((p) => p.id).toList();
+      _selectedProductIdsForCombo =
+          widget.initialCombo!.products.map((p) => p.id).toList();
     }
-    // TODO: Thêm UI để chọn/quản lý _selectedProductIds
-    // Đây là phần phức tạp nhất, có thể cần một dialog/multi-select widget
-    // để admin chọn từ danh sách sản phẩm hiện có.
-    // Ví dụ, bạn có thể fetch tất cả products và hiển thị trong một multi-select checkbox list.
+    _fetchAllRegularProducts(); // Tải danh sách sản phẩm thường khi màn hình khởi tạo
   }
 
   @override
@@ -51,182 +61,408 @@ class _EditComboScreenState extends State<EditComboScreen> {
     super.dispose();
   }
 
-  Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _fetchAllRegularProducts() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingProducts = true;
+    });
+    try {
+      final products = await _productService.fetchAllProducts();
+      if (!mounted) return;
       setState(() {
-        _isLoading = true;
+        _availableRegularProducts = products;
+        _isLoadingProducts = false;
       });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingProducts = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi tải danh sách sản phẩm: $e')),
+      );
+    }
+  }
 
-      // TODO: Lấy _selectedProductIds từ UI chọn sản phẩm của bạn.
-      // Hiện tại đang dùng _selectedProductIds đã khởi tạo.
-      // Ví dụ, nếu bạn có widget chọn sản phẩm:
-      // final List<String> currentProductIds = getProductIdsFromSelectorWidget();
+  Future<void> _showProductSelectionDialog() async {
+    if (_isLoadingProducts) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đang tải danh sách sản phẩm...')),
+      );
+      return;
+    }
+    if (_availableRegularProducts.isEmpty) {
+      // Có thể gọi lại _fetchAllRegularProducts nếu muốn thử lại
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Không có sản phẩm nào để chọn. Vui lòng thử lại.')),
+      );
+      await _fetchAllRegularProducts(); // Tải lại nếu rỗng
+      if (_availableRegularProducts.isEmpty)
+        return; // Vẫn rỗng thì không hiển thị dialog
+    }
 
-      // Kiểm tra dữ liệu cơ bản
-      if (_selectedProductIds.isEmpty) {
-         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Vui lòng chọn ít nhất một sản phẩm cho combo.')),
-          );
-          setState(() { _isLoading = false; });
-        }
-        return;
+    final Set<String>? result = await showDialog<Set<String>>(
+      context: context,
+      builder: (BuildContext context) {
+        return ProductSelectionDialog(
+          availableProducts: _availableRegularProducts,
+          initiallySelectedIds: Set<String>.from(_selectedProductIdsForCombo),
+        );
+      },
+    );
+
+    if (result != null) {
+      if (!mounted) return;
+      setState(() {
+        _selectedProductIdsForCombo = result.toList();
+      });
+    }
+  }
+
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    if (_selectedProductIdsForCombo.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Vui lòng chọn ít nhất một sản phẩm cho combo.')),
+        );
       }
+      return;
+    }
 
-      try {
-        String? userToken = "YOUR_ADMIN_AUTH_TOKEN"; // Lấy token thực tế của bạn
+    if (!mounted) return;
+    setState(() {
+      _isSubmitting = true;
+    });
 
-        if (widget.initialCombo == null) {
-          // --- TRƯỜNG HỢP TẠO MỚI COMBO ---
-          // Giả sử ApiService có hàm insertCombo phù hợp
-          InsertedComboData newCombo = await _apiService.insertCombo(
-            name: _nameController.text,
-            description: _descriptionController.text,
-            productIds: _selectedProductIds, // Gửi danh sách ID
-            imageUrl: _imageUrlController.text,
-            price: double.tryParse(_priceController.text) ?? 0,
-            authToken: userToken,
-          );
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Đã tạo combo "${newCombo.name}" thành công!')),
-            );
-            Navigator.pop(context, true); // Trả về true để báo hiệu có thay đổi
-          }
-        } else {
-          // --- TRƯỜNG HỢP CẬP NHẬT COMBO ---
-          InsertedComboData updatedCombo = await _apiService.updateCombo(
-            comboId: widget.initialCombo!.id,
-            name: _nameController.text,
-            description: _descriptionController.text,
-            productIds: _selectedProductIds, // Gửi danh sách ID
-            imageUrl: _imageUrlController.text,
-            price: double.tryParse(_priceController.text) ?? 0,
-            authToken: userToken,
-          );
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Đã cập nhật combo "${updatedCombo.name}"!')),
-            );
-            Navigator.pop(context, true); // Trả về true để báo hiệu có thay đổi
-          }
-        }
-      } catch (e) {
+    try {
+      String? userToken = "YOUR_ADMIN_AUTH_TOKEN"; // Lấy token thực tế
+
+      final dataToSubmit = {
+        "name": _nameController.text,
+        "description": _descriptionController.text,
+        "price": double.tryParse(_priceController.text) ?? 0,
+        "imageUrl": _imageUrlController.text,
+        "products": _selectedProductIdsForCombo, // Đây là List<String>
+      };
+
+      if (widget.initialCombo == null) {
+        // TẠO MỚI COMBO
+        // Giả sử hàm insertCombo của bạn nhận một Map<String, dynamic> hoặc các tham số riêng lẻ
+        // Ở đây tôi truyền Map để giống cấu trúc request bạn cung cấp
+        final newComboResponse = await _apiService.insertCombo(
+          name: dataToSubmit['name'] as String,
+          description: dataToSubmit['description'] as String,
+          productIds: dataToSubmit['products'] as List<String>,
+          imageUrl: dataToSubmit['imageUrl'] as String,
+          price: dataToSubmit['price'] as double,
+          authToken: userToken,
+        ); // Giả sử hàm insertCombo trả về model response (ví dụ InsertedComboData)
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Lỗi: $e')),
+            SnackBar(
+                content: Text(
+                    'Đã tạo combo "${newComboResponse.name}" thành công!')),
           );
+          Navigator.pop(context, true);
         }
-      } finally {
+      } else {
+        // CẬP NHẬT COMBO
+        final updatedComboResponse = await _apiService.updateCombo(
+          comboId: widget.initialCombo!.id,
+          name: dataToSubmit['name'] as String,
+          description: dataToSubmit['description'] as String,
+          productIds: dataToSubmit['products'] as List<String>,
+          imageUrl: dataToSubmit['imageUrl'] as String,
+          price: dataToSubmit['price'] as double,
+          authToken: userToken,
+        );
         if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content:
+                    Text('Đã cập nhật combo "${updatedComboResponse.name}"!')),
+          );
+          Navigator.pop(context, true);
         }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi lưu combo: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
       }
     }
+  }
+
+  Widget _buildSelectedProductsChips() {
+    if (_selectedProductIdsForCombo.isEmpty) {
+      return const Text('Chưa chọn sản phẩm nào cho combo.');
+    }
+    // Lấy tên sản phẩm từ _availableRegularProducts để hiển thị
+    List<Widget> chips = _selectedProductIdsForCombo.map((id) {
+      final product = _availableRegularProducts.firstWhere(
+        (p) => p.id == id,
+        orElse: () => Product(
+            id: id,
+            name: 'ID: $id (Không tìm thấy tên)',
+            price: 0,
+            description: '',
+            category: '',
+            stock: 0,
+            imageUrl: '',
+            sizes: [],
+            sugarLevels: [],
+            toppingIds: []), // Product rỗng nếu không tìm thấy
+      );
+      return Chip(
+        label: Text(product.name),
+        onDeleted: () {
+          if (!mounted) return;
+          setState(() {
+            _selectedProductIdsForCombo.remove(id);
+          });
+        },
+      );
+    }).toList();
+
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 4.0,
+      children: chips,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.initialCombo == null ? 'Thêm Combo Mới' : 'Sửa Combo'),
+        title: Text(widget.initialCombo == null
+            ? 'Thêm Combo Mới'
+            : 'Sửa Combo "${widget.initialCombo?.name}"'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _isLoading ? null : _submitForm,
+            icon: const Icon(Icons.save_outlined),
+            tooltip: 'Lưu Combo',
+            onPressed: _isSubmitting ? null : _submitForm,
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+      body: _isSubmitting
+          ? const Center(
+              child: CircularProgressIndicator(semanticsLabel: 'Đang lưu...'))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Form(
                 key: _formKey,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.stretch, // Cho nút bấm full width
                   children: <Widget>[
                     TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'Tên Combo'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Vui lòng nhập tên combo';
-                        }
-                        return null;
-                      },
-                    ),
+                        /* ... Tên Combo ... */ controller: _nameController,
+                        decoration: const InputDecoration(
+                            labelText: 'Tên Combo',
+                            border: OutlineInputBorder()),
+                        validator: (v) =>
+                            v!.isEmpty ? 'Không được bỏ trống' : null),
                     const SizedBox(height: 16),
                     TextFormField(
-                      controller: _descriptionController,
-                      decoration: const InputDecoration(labelText: 'Mô tả'),
+                      /* ... Mô tả ... */ controller: _descriptionController,
+                      decoration: const InputDecoration(
+                          labelText: 'Mô tả', border: OutlineInputBorder()),
                       maxLines: 3,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
-                      controller: _priceController,
-                      decoration: const InputDecoration(labelText: 'Giá Combo'),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Vui lòng nhập giá';
-                        }
-                        if (double.tryParse(value) == null || double.parse(value) <= 0) {
-                          return 'Giá không hợp lệ';
-                        }
-                        return null;
-                      },
-                    ),
+                        /* ... Giá ... */ controller: _priceController,
+                        decoration: const InputDecoration(
+                            labelText: 'Giá Combo',
+                            border: OutlineInputBorder(),
+                            prefixText: 'đ '),
+                        keyboardType: TextInputType.number,
+                        validator: (v) {
+                          if (v!.isEmpty) return 'Không được bỏ trống';
+                          if (double.tryParse(v) == null ||
+                              double.parse(v) <= 0) return 'Giá không hợp lệ';
+                          return null;
+                        }),
                     const SizedBox(height: 16),
                     TextFormField(
-                      controller: _imageUrlController,
-                      decoration: const InputDecoration(labelText: 'URL Hình ảnh'),
+                      /* ... URL Hình ảnh ... */ controller:
+                          _imageUrlController,
+                      decoration: const InputDecoration(
+                          labelText: 'URL Hình ảnh',
+                          border: OutlineInputBorder()),
                       keyboardType: TextInputType.url,
                     ),
                     const SizedBox(height: 24),
-                    const Text('Sản phẩm trong Combo:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    // TODO: Xây dựng UI để chọn và hiển thị sản phẩm cho combo
-                    // Đây là một phần phức tạp, có thể dùng MultiSelectChipField,
-                    // hoặc một ListView các CheckboxListTile từ danh sách sản phẩm của bạn.
-                    // Hiện tại, chỉ hiển thị danh sách ID (nếu có) để minh họa
-                    if (_selectedProductIds.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text('IDs Sản phẩm đã chọn: ${_selectedProductIds.join(", ")}'),
-                      )
-                    else
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text('Chưa có sản phẩm nào được chọn. (Cần UI chọn sản phẩm)'),
-                      ),
-
-                    // Nút để mở dialog/màn hình chọn sản phẩm
-                    ElevatedButton.icon(
-                        onPressed: () {
-                            // TODO: Mở UI chọn sản phẩm và cập nhật _selectedProductIds
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('UI chọn sản phẩm sẽ được thêm ở đây!')));
-                        },
-                        icon: const Icon(Icons.add_shopping_cart),
-                        label: const Text('Thêm/Sửa Sản Phẩm Trong Combo'),
+                    const Text('Sản phẩm trong Combo:',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    _isLoadingProducts
+                        ? const Center(
+                            child: Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Text("Đang tải danh sách sản phẩm...")))
+                        : _buildSelectedProductsChips(), // Hiển thị sản phẩm đã chọn bằng Chip
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.add_shopping_cart_outlined),
+                      label: const Text('Thêm/Sửa Sản Phẩm Trong Combo'),
+                      onPressed: _showProductSelectionDialog,
+                      style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12)),
                     ),
-
-
                     const SizedBox(height: 30),
-                    Center(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15)),
-                        onPressed: _isLoading ? null : _submitForm,
-                        child: Text(widget.initialCombo == null ? 'Tạo Combo' : 'Lưu Thay Đổi'),
-                      ),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.save),
+                      label: Text(widget.initialCombo == null
+                          ? 'Tạo Combo'
+                          : 'Lưu Thay Đổi'),
+                      onPressed: _isSubmitting ? null : _submitForm,
+                      style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          textStyle: const TextStyle(fontSize: 16)),
                     ),
                   ],
                 ),
               ),
             ),
+    );
+  }
+}
+
+// --- Widget Dialog Chọn Sản Phẩm ---
+class ProductSelectionDialog extends StatefulWidget {
+  final List<Product> availableProducts;
+  final Set<String> initiallySelectedIds;
+
+  const ProductSelectionDialog({
+    Key? key,
+    required this.availableProducts,
+    required this.initiallySelectedIds,
+  }) : super(key: key);
+
+  @override
+  State<ProductSelectionDialog> createState() => _ProductSelectionDialogState();
+}
+
+class _ProductSelectionDialogState extends State<ProductSelectionDialog> {
+  late Set<String> _tempSelectedProductIds;
+  late List<Product> _displayProducts;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _tempSelectedProductIds = Set<String>.from(widget.initiallySelectedIds);
+    _displayProducts = List<Product>.from(widget.availableProducts);
+    _searchController.addListener(_filterProducts);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_filterProducts);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterProducts() {
+    final query = _searchController.text.toLowerCase();
+    if (!mounted) return;
+    setState(() {
+      if (query.isEmpty) {
+        _displayProducts = List<Product>.from(widget.availableProducts);
+      } else {
+        _displayProducts = widget.availableProducts
+            .where((product) => product.name.toLowerCase().contains(query))
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Chọn Sản Phẩm Cho Combo'),
+      content: SizedBox(
+        // Giúp dialog có kích thước hợp lý
+        width: double.maxFinite, // Chiếm toàn bộ chiều rộng có thể
+        height: MediaQuery.of(context).size.height * 0.6, // Giới hạn chiều cao
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Tìm tên sản phẩm...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  isDense: true,
+                ),
+              ),
+            ),
+            Expanded(
+              child: _displayProducts.isEmpty
+                  ? const Center(child: Text('Không tìm thấy sản phẩm.'))
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _displayProducts.length,
+                      itemBuilder: (context, index) {
+                        final product = _displayProducts[index];
+                        final bool isSelected =
+                            _tempSelectedProductIds.contains(product.id);
+                        return CheckboxListTile(
+                          title: Text(product.name),
+                          subtitle: Text(
+                              "${product.price.toStringAsFixed(0)}đ"), // Format giá nếu cần
+                          value: isSelected,
+                          onChanged: (bool? value) {
+                            if (!mounted) return;
+                            setState(() {
+                              if (value == true) {
+                                _tempSelectedProductIds.add(product.id);
+                              } else {
+                                _tempSelectedProductIds.remove(product.id);
+                              }
+                            });
+                          },
+                          controlAffinity: ListTileControlAffinity.leading,
+                          dense: true,
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          child: const Text('Hủy'),
+          onPressed: () =>
+              Navigator.of(context).pop(null), // Trả về null nếu hủy
+        ),
+        ElevatedButton(
+          child: const Text('Xong'),
+          onPressed: () => Navigator.of(context)
+              .pop(_tempSelectedProductIds), // Trả về danh sách ID đã chọn
+        ),
+      ],
     );
   }
 }

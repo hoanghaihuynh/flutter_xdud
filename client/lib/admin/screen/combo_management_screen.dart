@@ -1,4 +1,3 @@
-// File: screens/admin/combo_management_screen.dart
 import 'package:flutter/material.dart';
 import '../../models/combo_model.dart'; // Đường dẫn tới file combo_model.dart của bạn
 import '../../services/combo_service.dart'; // Đường dẫn tới file api_service.dart của bạn
@@ -32,18 +31,20 @@ class _ComboManagementScreenState extends State<ComboManagementScreen> {
   }
 
   void _navigateToAddComboScreen() {
-    // Khi có màn hình EditComboScreen, bạn sẽ điều hướng tới đó
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(builder: (context) => const EditComboScreen()),
-    // ).then((result) {
-    //   // Nếu result là true (nghĩa là có thay đổi), tải lại danh sách combos
-    //   if (result == true) {
-    //     _loadCombos();
-    //   }
-    // });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Chức năng Thêm Combo sẽ được phát triển!')));
+    Navigator.push<bool>(
+      // Sử dụng <bool> để nhận kết quả trả về
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const EditComboScreen(), // Không truyền initialCombo để ở chế độ tạo mới
+      ),
+    ).then((result) {
+      // Nếu EditComboScreen trả về true (nghĩa là đã tạo combo thành công),
+      // thì tải lại danh sách combo.
+      if (result == true) {
+        _loadCombos();
+      }
+    });
   }
 
   void _navigateToEditComboScreen(Combo combo) {
@@ -55,14 +56,14 @@ class _ComboManagementScreenState extends State<ComboManagementScreen> {
           builder: (context) =>
               EditComboScreen(initialCombo: combo)), // Truyền combo hiện tại
     ).then((result) {
-      // Nếu result là true (nghĩa là có thay đổi từ EditComboScreen), tải lại danh sách combos
       if (result == true) {
         _loadCombos();
       }
     });
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content:
-            Text('Chức năng Sửa Combo "${combo.name}" sẽ được phát triển!')));
+            Text('Chức năng Sửa Combo "${combo.name}" sẽ được phát triển!'),
+        backgroundColor: Colors.green));
   }
 
   Future<void> _confirmDeleteCombo(String comboId, String comboName) async {
@@ -106,29 +107,29 @@ class _ComboManagementScreenState extends State<ComboManagementScreen> {
   }
 
   // Giả sử bạn có hàm cập nhật trạng thái combo trong ApiService
-  Future<void> _toggleComboActiveStatus(Combo combo, bool isActive) async {
-    try {
-      // TODO: Gọi API để cập nhật trạng thái combo. Ví dụ:
-      // await _apiService.updateComboStatus(combo.id, isActive);
-      // Sau khi thành công, tải lại danh sách hoặc cập nhật item cụ thể
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(
-                'Đã ${isActive ? "kích hoạt" : "hủy kích hoạt"} combo "${combo.name}" (giả lập)')),
-      );
-      // Để UI cập nhật ngay lập tức mà không cần gọi lại API (nếu API thành công)
-      // bạn có thể cập nhật trạng thái của đối tượng combo trong list và setState.
-      // Tuy nhiên, gọi lại _loadCombos() đảm bảo dữ liệu luôn mới nhất.
-      _loadCombos();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi cập nhật trạng thái: $e')),
-        );
-        // Đảo ngược lại switch nếu API thất bại (tùy chọn)
-      }
-    }
-  }
+  // Future<void> _toggleComboActiveStatus(Combo combo, bool isActive) async {
+  //   try {
+  //     // TODO: Gọi API để cập nhật trạng thái combo. Ví dụ:
+  //     // await _apiService.updateComboStatus(combo.id, isActive);
+  //     // Sau khi thành công, tải lại danh sách hoặc cập nhật item cụ thể
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //           content: Text(
+  //               'Đã ${isActive ? "kích hoạt" : "hủy kích hoạt"} combo "${combo.name}" (giả lập)')),
+  //     );
+  //     // Để UI cập nhật ngay lập tức mà không cần gọi lại API (nếu API thành công)
+  //     // bạn có thể cập nhật trạng thái của đối tượng combo trong list và setState.
+  //     // Tuy nhiên, gọi lại _loadCombos() đảm bảo dữ liệu luôn mới nhất.
+  //     _loadCombos();
+  //   } catch (e) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('Lỗi cập nhật trạng thái: $e')),
+  //       );
+  //       // Đảo ngược lại switch nếu API thất bại (tùy chọn)
+  //     }
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {

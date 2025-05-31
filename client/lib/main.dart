@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:myproject/admin/screen/combo_management_screen.dart';
+// import 'package:myproject/admin/screen/combo_management_screen.dart';
 import 'package:myproject/screen/login_screen.dart';
 
 void main() {
@@ -48,7 +48,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: ComboManagementScreen(),
+      home: LoginScreen(),
     );
   }
 }

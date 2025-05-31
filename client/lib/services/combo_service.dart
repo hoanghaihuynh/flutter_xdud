@@ -100,7 +100,8 @@ class ApiService {
     String? authToken, // Token xác thực (tùy chọn)
   }) async {
     // Xây dựng URL với path parameter
-    final Uri uri = Uri.parse(AppConfig.getApiUrl('/combo/updateCombo/$comboId'));
+    final Uri uri =
+        Uri.parse(AppConfig.getApiUrl('/combo/updateCombo/$comboId'));
 
     final Map<String, dynamic> requestBody = {
       'name': name,
@@ -125,9 +126,11 @@ class ApiService {
         body: json.encode(requestBody),
       );
 
-      if (response.statusCode == 200) { // API update thường trả về 200 OK
+      if (response.statusCode == 200) {
+        // API update thường trả về 200 OK
         // Response body giống với insertCombo, nên có thể dùng cùng hàm parse
-        return parseInsertedComboData(response.body); // Hoặc parseInsertedComboData(response.body)
+        return parseInsertedComboData(
+            response.body); // Hoặc parseInsertedComboData(response.body)
       } else {
         print('Failed to update combo. Status code: ${response.statusCode}');
         print('Response body: ${response.body}');
@@ -137,6 +140,64 @@ class ApiService {
     } catch (e) {
       print('Error during updateCombo API call: $e');
       throw Exception('Error updating combo: $e');
+    }
+  }
+
+  // Delete combo
+  Future<DeleteResponseMessage> deleteCombo({
+    required String comboId,
+    String? authToken, // Token xác thực (tùy chọn)
+  }) async {
+    final Uri uri =
+        Uri.parse(AppConfig.getApiUrl('/combo/deleteCombo/$comboId'));
+
+    final Map<String, String> headers = {
+      'Content-Type':
+          'application/json; charset=UTF-8', // Vẫn nên có dù không có body
+    };
+    if (authToken != null && authToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $authToken';
+    }
+
+    try {
+      final response = await http.delete(
+        uri,
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        // API delete thành công thường trả về 200 OK (nếu có body) hoặc 204 No Content
+        // Dựa trên response bạn cung cấp, nó có body message nên 200 OK là hợp lý
+        return parseDeleteResponseMessage(response.body);
+      } else if (response.statusCode == 204) {
+        // Nếu API trả về 204, không có body để parse.
+        // Bạn có thể trả về một đối tượng DeleteResponseMessage mặc định.
+        return DeleteResponseMessage(
+            message: 'Combo deleted successfully (204)');
+      } else {
+        // Xử lý các lỗi khác từ server
+        String errorMessage =
+            'Failed to delete combo (Status Code: ${response.statusCode})';
+        try {
+          // Thử parse body lỗi nếu có
+          final errorBody = json.decode(response.body);
+          if (errorBody['message'] != null) {
+            errorMessage =
+                'Failed to delete combo: ${errorBody['message']} (Status Code: ${response.statusCode})';
+          }
+        } catch (_) {
+          // Nếu body không phải JSON hoặc không có message, dùng body gốc (nếu ngắn)
+          if (response.body.isNotEmpty && response.body.length < 200) {
+            errorMessage += ' - Body: ${response.body}';
+          }
+        }
+        print(errorMessage);
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      // Xử lý lỗi mạng hoặc các lỗi khác
+      print('Error during deleteCombo API call: $e');
+      throw Exception('Error deleting combo: $e');
     }
   }
 }

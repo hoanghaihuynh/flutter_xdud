@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:myproject/admin/screen/cart_management_screen.dart';
+import 'package:myproject/admin/screen/combo_management_screen.dart';
 import 'package:myproject/admin/screen/order_management_screen.dart';
 import 'package:myproject/admin/screen/product_management_screen.dart';
 import 'package:myproject/admin/screen/user_management_screen.dart';
@@ -169,12 +170,13 @@ class AdminDashboard extends StatelessWidget {
             _buildDashboardCard(
               context,
               Icons.table_bar,
-              'Tables Management',
-              Colors.blueAccent,
+              'Combo Management',
+              Colors.red,
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const TableScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const ComboManagementScreen()),
                 );
               },
             ),

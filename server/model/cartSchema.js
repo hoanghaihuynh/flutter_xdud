@@ -24,8 +24,8 @@ const cartSchema = new Schema(
           },
           sugarLevel: {
             type: String,
-            enum: ["0 SL", "50 SL", "75 SL"], // Các mức độ đường có thể chọn
-            required: true, // Bắt buộc phải chọn mức độ đường
+            enum: ["0 SL", "50 SL", "75 SL"],
+            required: true,
             default: "",
           },
         },

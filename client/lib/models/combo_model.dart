@@ -146,6 +146,25 @@ class Combo {
   }
 }
 
+class DeleteResponseMessage {
+  final String message;
+
+  DeleteResponseMessage({required this.message});
+
+  factory DeleteResponseMessage.fromJson(Map<String, dynamic> json) {
+    return DeleteResponseMessage(
+      message: json['message'] as String? ??
+          'Operation successful', // Xử lý nếu message có thể null
+    );
+  }
+}
+
+// Hàm helper để parse response
+DeleteResponseMessage parseDeleteResponseMessage(String responseBody) {
+  final Map<String, dynamic> parsed = json.decode(responseBody);
+  return DeleteResponseMessage.fromJson(parsed);
+}
+
 // Hàm helper để parse một danh sách các đối tượng Combo từ chuỗi JSON
 List<Combo> parseCombos(String responseBody) {
   try {
