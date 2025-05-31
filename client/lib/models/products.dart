@@ -58,6 +58,7 @@ class Product {
 // Danh sách categories có thể tách ra file riêng
 const List<String> productCategories = [
   'All',
+  'Combo',
   'Coffee',
   'Tea',
   'Smoothies',

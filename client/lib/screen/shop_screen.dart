@@ -25,6 +25,7 @@ class _ShopScreenState extends State<ShopScreen> {
   // Danh sách categories nên được khai báo là static const
   static const List<String> categories = [
     'All',
+    'Combo',
     'Coffee',
     'Tea',
     'Smoothies',
@@ -119,7 +120,8 @@ class _ShopScreenState extends State<ShopScreen> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator( // Thêm pull-to-refresh
+          : RefreshIndicator(
+              // Thêm pull-to-refresh
               onRefresh: fetchProducts,
               child: Column(
                 children: [
