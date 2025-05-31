@@ -1,205 +1,490 @@
+// ./services/cartService.js
 const Cart = require("./../model/cartSchema");
 const Product = require("./../model/productSchema");
 const Topping = require("./../model/toppingSchema");
 const Voucher = require("./../model/voucherSchema");
+const Combo = require("./../model/comboSchema"); // Đảm bảo import Combo model
 
 class CartService {
-  // Lấy danh sách toàn bộ giỏ hàng
   static async getAllCart() {
-    return await Cart.find().populate("products.productId");
+    return await Cart.find()
+      .populate("userId", "fullName email") // Ví dụ populate thêm thông tin user
+      .populate("items.productId", "name price imageUrl category stock") // Populate cho product items
+      .populate("items.comboId", "name price imageUrl products"); // Populate cho combo items
   }
 
-  // Lấy giỏ hàng theo userId
   static async getCartByUserId(userId) {
-    return await Cart.findOne({ userId }).populate("products.productId");
+    return await Cart.findOne({ userId })
+      .populate("userId", "fullName email")
+      .populate("items.productId", "name price imageUrl category stock")
+      .populate("items.comboId", "name price imageUrl products");
   }
 
-  // Thêm item vào giỏ hàng
+  // Thêm sp vào giỏ hàng
   static async insertToCart(
     userId,
     productId,
-    quantity,
+    quantity = 1,
     size,
     sugarLevel,
     toppingIds
   ) {
-    // Kiểm tra nếu size và sugarLevel không có, trả về lỗi
-    if (!size || !sugarLevel) {
-      throw new Error("Thiếu size hoặc sugarLevel cho sản phẩm");
+    if (!userId || !productId || !size || !sugarLevel) {
+      throw new Error(
+        "Thiếu thông tin bắt buộc: userId, productId, size, hoặc sugarLevel."
+      );
+    }
+    if (typeof quantity !== "number" || quantity < 1) {
+      throw new Error("Số lượng không hợp lệ.");
     }
 
-    // Tìm sản phẩm
     const product = await Product.findById(productId);
-    if (!product) throw new Error("Sản phẩm không tồn tại");
+    if (!product) {
+      throw new Error(`Sản phẩm với ID ${productId} không tồn tại.`);
+    }
 
-    // Lấy các topping từ database nếu có toppingIds
-    const toppings = toppingIds
-      ? await Topping.find({ _id: { $in: toppingIds } })
-      : [];
+    const selectedToppings =
+      toppingIds && toppingIds.length > 0
+        ? await Topping.find({ _id: { $in: toppingIds } })
+        : [];
 
-    // Chuyển đổi các topping thành tên topping và giá của chúng
-    const toppingNames = toppings.map((topping) => topping.name); // Lấy tên topping
-    const toppingPrices = toppings.map((topping) => topping.price); // Lấy giá topping
-
-    // Tính tổng giá của topping
-    const totalToppingPrice = toppingPrices.reduce(
-      (total, price) => total + price,
+    const toppingNamesForNote = selectedToppings.map((t) => t.name);
+    const singleItemToppingPrice = selectedToppings.reduce(
+      (sum, t) => sum + t.price,
       0
     );
 
-    // Kiểm tra nếu giỏ hàng đã tồn tại
     let cart = await Cart.findOne({ userId });
-
     if (!cart) {
-      // Nếu không có giỏ hàng, tạo mới giỏ hàng
       cart = new Cart({
         userId,
-        products: [
-          {
-            productId,
-            quantity,
-            price: product.price,
-            note: {
-              size,
-              sugarLevel,
-              toppings: toppingNames, // Lưu tên topping vào trong note
-            },
-          },
-        ],
-        totalPrice: product.price * quantity + totalToppingPrice * quantity, // Tính tổng giá giỏ hàng, bao gồm giá topping
+        items: [],
+        totalPrice: 0,
+        voucher_code: null,
+        discount_amount: 0,
       });
-    } else {
-      // Nếu giỏ hàng đã có, kiểm tra xem sản phẩm đã có trong giỏ chưa
-      const index = cart.products.findIndex(
-        (item) => item.productId.toString() === productId
-      );
-
-      if (index > -1) {
-        // Nếu có, cập nhật số lượng và các lựa chọn
-        cart.products[index].quantity += quantity;
-        cart.products[index].note = {
-          size,
-          sugarLevel,
-          toppings: toppingNames,
-        }; // Cập nhật topping names
-      } else {
-        // Nếu không có, thêm sản phẩm mới vào giỏ hàng
-        cart.products.push({
-          productId,
-          quantity,
-          price: product.price,
-          note: {
-            size,
-            sugarLevel,
-            toppings: toppingNames,
-          },
-        });
-      }
-
-      // Cập nhật lại tổng giá trị giỏ hàng
-      cart.totalPrice = cart.products.reduce(
-        (total, item) =>
-          total +
-          item.quantity * item.price +
-          totalToppingPrice * item.quantity,
-        0
-      );
     }
 
-    // Lưu lại giỏ hàng vào cơ sở dữ liệu
+    const existingItemIndex = cart.items.findIndex(
+      (item) =>
+        item.itemType === "PRODUCT" &&
+        item.productId && // Đảm bảo productId tồn tại trước khi toString
+        item.productId.toString() === productId &&
+        item.note.size === size &&
+        item.note.sugarLevel === sugarLevel &&
+        JSON.stringify((item.note.toppings || []).slice().sort()) ===
+          JSON.stringify(toppingNamesForNote.slice().sort())
+    );
+
+    if (existingItemIndex > -1) {
+      const existingItem = cart.items[existingItemIndex];
+      const newQuantityForExistingItem = existingItem.quantity + quantity;
+      if (newQuantityForExistingItem > product.stock) {
+        throw new Error(
+          `Không đủ tồn kho cho sản phẩm "${product.name}". Yêu cầu ${newQuantityForExistingItem}, chỉ còn ${product.stock}.`
+        );
+      }
+      existingItem.quantity = newQuantityForExistingItem;
+      existingItem.subTotal =
+        (existingItem.price + existingItem.itemToppingPrice) *
+        existingItem.quantity;
+    } else {
+      if (quantity > product.stock) {
+        throw new Error(
+          `Không đủ tồn kho cho sản phẩm "${product.name}". Yêu cầu ${quantity}, chỉ còn ${product.stock}.`
+        );
+      }
+      const newItem = {
+        itemType: "PRODUCT",
+        productId: product._id,
+        name: product.name,
+        imageUrl: product.imageUrl || "",
+        quantity: quantity,
+        price: product.price,
+        note: {
+          size,
+          sugarLevel,
+          toppings: toppingNamesForNote,
+        },
+        itemToppingPrice: singleItemToppingPrice,
+        subTotal: (product.price + singleItemToppingPrice) * quantity,
+      };
+      cart.items.push(newItem);
+    }
+
+    cart.totalPrice = cart.items.reduce(
+      (sum, item) => sum + (item.subTotal || 0),
+      0
+    );
+
+    if (cart.voucher_code) {
+      const voucher = await Voucher.findOne({ code: cart.voucher_code });
+      if (
+        voucher &&
+        voucher.start_date <= new Date() &&
+        voucher.expiry_date >= new Date() &&
+        voucher.used_count < voucher.quantity &&
+        cart.totalPrice >= voucher.min_order_value
+      ) {
+        let newDiscountAmount = 0;
+        if (voucher.discount_type === "percent") {
+          newDiscountAmount = (cart.totalPrice * voucher.discount_value) / 100;
+          if (voucher.max_discount > 0) {
+            newDiscountAmount = Math.min(
+              newDiscountAmount,
+              voucher.max_discount
+            );
+          }
+        } else if (voucher.discount_type === "fixed") {
+          newDiscountAmount = voucher.discount_value;
+          if (newDiscountAmount > cart.totalPrice)
+            newDiscountAmount = cart.totalPrice;
+        }
+        cart.discount_amount = newDiscountAmount;
+      } else {
+        cart.voucher_code = null;
+        cart.discount_amount = 0;
+      }
+    } else {
+      cart.discount_amount = 0;
+    }
+
     await cart.save();
     return cart;
   }
 
-  // Xóa 1 sản phẩm khỏi giỏ hàng
-  static async removeProduct(userId, productId) {
-    const product = await Product.findById(productId);
-    if (!product) throw new Error("Sản phẩm không tồn tại");
+  // HÀM MỚI ĐỂ THÊM COMBO VÀO GIỎ HÀNG
+  static async addComboToCart(userId, comboId, comboQuantity = 1) {
+    if (!userId || !comboId) {
+      throw new Error("Thiếu thông tin bắt buộc: userId hoặc comboId.");
+    }
+    if (typeof comboQuantity !== "number" || comboQuantity < 1) {
+      throw new Error("Số lượng combo không hợp lệ.");
+    }
+
+    // 1. Lấy thông tin chi tiết của Combo
+    // Populate sâu để lấy thông tin sản phẩm con và topping mặc định của sản phẩm con
+    const combo = await Combo.findById(comboId)
+      .populate({
+        path: "products.productId", // Populate Product object trong mảng products của Combo
+        model: "products", // Tên model Product của bạn
+        populate: {
+          // Populate tiếp Topping nếu Product có trường ref đến Topping
+          path: "toppings", // Giả sử Product có trường 'toppings' ref đến Topping model
+          model: "toppings",
+        },
+      })
+      .populate({
+        path: "products.defaultToppings", // Populate Topping objects trong defaultToppings của ComboProductItemSchema
+        model: "toppings", // Tên model Topping của bạn
+      });
+
+    if (!combo) {
+      const err = new Error("Combo không tồn tại.");
+      err.name = "ComboNotFoundError";
+      throw err;
+    }
+
+    if (!combo.isActive) {
+      const err = new Error("Combo này hiện không có sẵn để bán.");
+      err.name = "ComboNotActiveError";
+      throw err;
+    }
+
+    // 2. Kiểm tra tồn kho cho từng sản phẩm con trong combo
+    for (const comboProductItem of combo.products) {
+      if (!comboProductItem.productId) {
+        const err = new Error(
+          `Một sản phẩm tham chiếu trong combo (ID: ${comboId}) không hợp lệ hoặc không thể tải.`
+        );
+        err.name = "ProductInComboNotFoundError";
+        throw err;
+      }
+      const productDetails = comboProductItem.productId;
+      const requiredStockForThisItem =
+        (comboProductItem.quantityInCombo || 1) * comboQuantity;
+
+      if (productDetails.stock < requiredStockForThisItem) {
+        const err = new Error(
+          `Sản phẩm "${productDetails.name}" trong combo "${combo.name}" không đủ số lượng tồn kho (cần ${requiredStockForThisItem}, còn ${productDetails.stock}).`
+        );
+        err.name = "ProductInComboOutOfStockError";
+        throw err;
+      }
+    }
+
+    // 3. Tìm hoặc tạo giỏ hàng cho người dùng
+    let cart = await Cart.findOne({ userId });
+    if (!cart) {
+      cart = new Cart({
+        userId,
+        items: [],
+        totalPrice: 0,
+        voucher_code: null,
+        discount_amount: 0,
+      });
+    }
+
+    // 4. Thêm hoặc cập nhật "mục combo" trong giỏ hàng
+    const existingComboItemIndex = cart.items.findIndex(
+      (item) =>
+        item.itemType === "COMBO" &&
+        item.comboId && // Đảm bảo comboId tồn tại
+        item.comboId.toString() === comboId
+    );
+
+    if (existingComboItemIndex > -1) {
+      // Combo đã tồn tại trong giỏ, cập nhật số lượng
+      const existingItem = cart.items[existingComboItemIndex];
+      existingItem.quantity += comboQuantity;
+      existingItem.subTotal = existingItem.price * existingItem.quantity; // price ở đây là combo.price
+    } else {
+      // Combo chưa có trong giỏ, thêm mới
+      const newComboItem = {
+        itemType: "COMBO",
+        comboId: combo._id,
+        name: combo.name,
+        imageUrl: combo.imageUrl || "",
+        quantity: comboQuantity,
+        price: combo.price, // Giá của MỘT đơn vị combo
+        note: {
+          // Note cho combo có thể khác với product, ví dụ mô tả ngắn
+          size: "", // Không áp dụng trực tiếp cho cả combo
+          sugarLevel: "", // Không áp dụng trực tiếp cho cả combo
+          toppings: [], // Không áp dụng trực tiếp cho cả combo
+          // description: combo.description // Có thể thêm mô tả combo vào note
+        },
+        itemToppingPrice: 0, // Combo thường có giá trọn gói, không tính topping riêng ở cấp độ này
+        subTotal: combo.price * comboQuantity,
+      };
+      cart.items.push(newComboItem);
+    }
+
+    // 5. Tính lại tổng giá giỏ hàng (totalPrice)
+    cart.totalPrice = cart.items.reduce(
+      (sum, item) => sum + (item.subTotal || 0),
+      0
+    );
+
+    // 6. Cập nhật lại discount nếu có voucher đang được áp dụng
+    if (cart.voucher_code) {
+      const voucher = await Voucher.findOne({ code: cart.voucher_code });
+      if (
+        voucher &&
+        voucher.start_date <= new Date() &&
+        voucher.expiry_date >= new Date() &&
+        voucher.used_count < voucher.quantity &&
+        cart.totalPrice >= voucher.min_order_value
+      ) {
+        let newDiscountAmount = 0;
+        if (voucher.discount_type === "percent") {
+          newDiscountAmount = (cart.totalPrice * voucher.discount_value) / 100;
+          if (voucher.max_discount > 0) {
+            newDiscountAmount = Math.min(
+              newDiscountAmount,
+              voucher.max_discount
+            );
+          }
+        } else if (voucher.discount_type === "fixed") {
+          newDiscountAmount = voucher.discount_value;
+          if (newDiscountAmount > cart.totalPrice)
+            newDiscountAmount = cart.totalPrice;
+        }
+        cart.discount_amount = newDiscountAmount;
+      } else {
+        cart.voucher_code = null;
+        cart.discount_amount = 0;
+      }
+    } else {
+      cart.discount_amount = 0;
+    }
+
+    // 7. Lưu giỏ hàng
+    await cart.save();
+    return cart;
+  }
+
+  // Ví dụ cập nhật cho removeProduct (ưu tiên cartItemId)
+  static async removeProduct(userId, cartItemId) {
+    const cart = await Cart.findOne({ userId });
+    if (!cart) throw new Error("Không tìm thấy giỏ hàng");
+
+    const itemIndex = cart.items.findIndex(
+      (item) => item._id.toString() === cartItemId
+    );
+
+    if (itemIndex === -1)
+      throw new Error("Mục hàng không có trong giỏ hoặc cartItemId không đúng");
+
+    cart.items.splice(itemIndex, 1); // Xóa mục hàng
+
+    // Tính lại totalPrice và discount
+    cart.totalPrice = cart.items.reduce(
+      (sum, item) => sum + (item.subTotal || 0),
+      0
+    );
+    if (cart.voucher_code) {
+      const voucher = await Voucher.findOne({ code: cart.voucher_code });
+      if (
+        voucher &&
+        voucher.start_date <= new Date() &&
+        voucher.expiry_date >= new Date() &&
+        voucher.used_count < voucher.quantity &&
+        cart.totalPrice >= voucher.min_order_value
+      ) {
+        let newDiscountAmount = 0;
+        if (voucher.discount_type === "percent") {
+          newDiscountAmount = (cart.totalPrice * voucher.discount_value) / 100;
+          if (voucher.max_discount > 0)
+            newDiscountAmount = Math.min(
+              newDiscountAmount,
+              voucher.max_discount
+            );
+        } else if (voucher.discount_type === "fixed") {
+          newDiscountAmount = voucher.discount_value;
+          if (newDiscountAmount > cart.totalPrice)
+            newDiscountAmount = cart.totalPrice;
+        }
+        cart.discount_amount = newDiscountAmount;
+      } else {
+        cart.voucher_code = null;
+        cart.discount_amount = 0;
+      }
+    } else {
+      cart.discount_amount = 0;
+    }
+
+    await cart.save();
+    return cart;
+  }
+
+  // Ví dụ cập nhật cho updateQuantity (ưu tiên cartItemId)
+  static async updateQuantity(userId, cartItemId, newQuantity) {
+    if (typeof newQuantity !== "number" || newQuantity < 0) {
+      // newQuantity = 0 để xóa
+      throw new Error("Số lượng mới không hợp lệ.");
+    }
 
     const cart = await Cart.findOne({ userId });
     if (!cart) throw new Error("Không tìm thấy giỏ hàng");
 
-    const index = cart.products.findIndex(
-      (item) => item.productId.toString() === productId
+    const itemIndex = cart.items.findIndex(
+      (p) => p._id.toString() === cartItemId
     );
+    if (itemIndex === -1)
+      throw new Error("Mục hàng không có trong giỏ hoặc cartItemId không đúng");
 
-    if (index === -1) throw new Error("Sản phẩm không có trong giỏ hàng");
+    const itemToUpdate = cart.items[itemIndex];
 
-    const removedItem = cart.products[index];
-    cart.products.splice(index, 1);
-    cart.totalPrice = Math.max(
-      0,
-      cart.totalPrice - removedItem.quantity * removedItem.price
+    if (newQuantity === 0) {
+      cart.items.splice(itemIndex, 1); // Xóa nếu số lượng là 0
+    } else {
+      // Kiểm tra tồn kho trước khi cập nhật số lượng
+      if (itemToUpdate.itemType === "PRODUCT") {
+        const productDetails = await Product.findById(itemToUpdate.productId);
+        if (!productDetails)
+          throw new Error("Sản phẩm gốc của mục hàng không tồn tại.");
+        if (newQuantity > productDetails.stock) {
+          throw new Error(
+            `Số lượng yêu cầu (${newQuantity}) cho "${itemToUpdate.name}" vượt quá tồn kho (còn ${productDetails.stock}).`
+          );
+        }
+      } else if (itemToUpdate.itemType === "COMBO") {
+        const comboDetails = await Combo.findById(
+          itemToUpdate.comboId
+        ).populate("products.productId");
+        if (!comboDetails)
+          throw new Error("Combo gốc của mục hàng không tồn tại.");
+        for (const comboProductItem of comboDetails.products) {
+          const productInCombo = comboProductItem.productId;
+          const requiredStockForThisItem =
+            (comboProductItem.quantityInCombo || 1) * newQuantity; // newQuantity ở đây là số lượng combo mới
+          if (productInCombo.stock < requiredStockForThisItem) {
+            throw new Error(
+              `Không đủ tồn kho cho sản phẩm "${productInCombo.name}" trong combo "${comboDetails.name}" để cập nhật số lượng combo lên ${newQuantity}.`
+            );
+          }
+        }
+      }
+      itemToUpdate.quantity = newQuantity;
+      itemToUpdate.subTotal = itemToUpdate.price * itemToUpdate.quantity; // price là giá của 1 product hoặc 1 combo
+    }
+
+    // Tính lại totalPrice và discount
+    cart.totalPrice = cart.items.reduce(
+      (sum, item) => sum + (item.subTotal || 0),
+      0
     );
+    if (cart.voucher_code) {
+      const voucher = await Voucher.findOne({ code: cart.voucher_code });
+      if (
+        voucher &&
+        voucher.start_date <= new Date() &&
+        voucher.expiry_date >= new Date() &&
+        voucher.used_count < voucher.quantity &&
+        cart.totalPrice >= voucher.min_order_value
+      ) {
+        let newDiscountAmount = 0;
+        if (voucher.discount_type === "percent") {
+          newDiscountAmount = (cart.totalPrice * voucher.discount_value) / 100;
+          if (voucher.max_discount > 0)
+            newDiscountAmount = Math.min(
+              newDiscountAmount,
+              voucher.max_discount
+            );
+        } else if (voucher.discount_type === "fixed") {
+          newDiscountAmount = voucher.discount_value;
+          if (newDiscountAmount > cart.totalPrice)
+            newDiscountAmount = cart.totalPrice;
+        }
+        cart.discount_amount = newDiscountAmount;
+      } else {
+        cart.voucher_code = null;
+        cart.discount_amount = 0;
+      }
+    } else {
+      cart.discount_amount = 0;
+    }
 
     await cart.save();
-    return cart;
+    return { cart };
   }
 
-  // Cập nhật số lượng sản phẩm trong giỏ
-  static async updateQuantity(userId, productId, newQuantity) {
-    if (newQuantity < 1) throw new Error("Số lượng phải lớn hơn 0");
-
-    const product = await Product.findById(productId);
-    if (!product) throw new Error("Sản phẩm không tồn tại");
-
-    if (newQuantity > product.stock)
-      throw new Error("Số lượng vượt quá tồn kho");
-
-    const cart = await Cart.findOne({ userId }).populate("products.productId");
-    if (!cart) throw new Error("Không tìm thấy giỏ hàng");
-
-    const item = cart.products.find(
-      (p) => p.productId._id.toString() === productId
-    );
-    if (!item) throw new Error("Sản phẩm không có trong giỏ hàng");
-
-    const oldTotal = item.quantity * item.price;
-    item.quantity = newQuantity;
-    const newTotal = item.quantity * item.price;
-
-    cart.totalPrice = cart.totalPrice - oldTotal + newTotal;
-    await cart.save();
-
-    return {
-      cart,
-      updatedProduct: {
-        productId,
-        newQuantity,
-        newPrice: newTotal,
-      },
-    };
-  }
-
-  // Xóa toàn bộ sản phẩm trong giỏ hàng
   static async clearCart(userId) {
     const cart = await Cart.findOne({ userId });
     if (!cart) throw new Error("Không tìm thấy giỏ hàng");
 
-    cart.products = [];
+    cart.items = [];
     cart.totalPrice = 0;
+    cart.voucher_code = null;
+    cart.discount_amount = 0;
     await cart.save();
     return cart;
   }
 
-  // Áp dụng voucher vào giỏ hàng
+  // áp dụng voucher
   static async applyVoucherToCart(userId, voucher_code) {
-    // Tìm giỏ hàng theo userId
     const cart = await Cart.findOne({ userId });
     if (!cart) throw new Error("Giỏ hàng không tồn tại");
+    if (cart.items.length === 0)
+      throw new Error("Giỏ hàng trống, không thể áp dụng voucher.");
 
-    // Tìm voucher theo code
     const voucher = await Voucher.findOne({ code: voucher_code });
     if (!voucher) throw new Error("Voucher không tồn tại");
 
     const now = new Date();
-    if (now < voucher.start_date || now > voucher.expiry_date)
-      throw new Error("Voucher không còn hiệu lực");
-
-    if (voucher.used_count >= voucher.quantity)
+    if (now < voucher.start_date || now > voucher.expiry_date) {
+      throw new Error("Voucher không còn hiệu lực hoặc chưa đến ngày sử dụng");
+    }
+    if (voucher.used_count >= voucher.quantity) {
       throw new Error("Voucher đã được sử dụng hết");
+    }
+    if (cart.totalPrice < voucher.min_order_value) {
+      throw new Error(
+        `Tổng giá trị đơn hàng (${cart.totalPrice.toLocaleString()}đ) chưa đạt mức tối thiểu (${voucher.min_order_value.toLocaleString()}đ) để sử dụng voucher này.`
+      );
+    }
 
-    // Tính giá trị giảm giá
     let discountAmount = 0;
     if (voucher.discount_type === "percent") {
       discountAmount = (cart.totalPrice * voucher.discount_value) / 100;
@@ -208,15 +493,13 @@ class CartService {
       }
     } else if (voucher.discount_type === "fixed") {
       discountAmount = voucher.discount_value;
+      if (discountAmount > cart.totalPrice) discountAmount = cart.totalPrice;
     }
 
-    // Cập nhật cart
     cart.voucher_code = voucher_code;
     cart.discount_amount = discountAmount;
-    cart.totalPriceAfterDiscount = cart.totalPrice - discountAmount;
 
     await cart.save();
-
     return cart;
   }
 }
