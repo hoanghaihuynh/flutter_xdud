@@ -9,6 +9,7 @@ const orderRouter = require("./routers/orderRouter");
 const toppingRouter = require("./routers/toppingRouter");
 const voucherRouter = require("./routers/voucherRouter");
 const tableRouter = require("./routers/tableRouter");
+const comboRouter = require("./routers/comboRouter");
 
 const app = express();
 
@@ -23,5 +24,6 @@ app.use("/", orderRouter);
 app.use("/", toppingRouter);
 app.use("/", voucherRouter);
 app.use("/", tableRouter);
+app.use("/", comboRouter);
 
 module.exports = app;
