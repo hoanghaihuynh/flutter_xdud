@@ -84,66 +84,71 @@ class CartService {
   }
 
   // Xóa sản phẩm khỏi giỏ hàng
-static Future<Map<String, dynamic>> removeItem({
-  required String userId,
-  required String cartItemId,
-  required String productId,
-}) async {
-  try {
-    final response = await http.delete(
-      Uri.parse(AppConfig.getApiUrl('/cart/removeProduct')),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'userId': userId,
-        'cartItemId': cartItemId,
-        'productId': productId,
-      }),
-    ).timeout(const Duration(seconds: 10));
+  static Future<Map<String, dynamic>> removeItem({
+    required String userId,
+    required String cartItemId,
+    required String productId,
+  }) async {
+    try {
+      final response = await http
+          .delete(
+            Uri.parse(AppConfig.getApiUrl('/cart/removeProduct')),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'userId': userId,
+              'cartItemId': cartItemId,
+              'productId': productId,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
-    final responseData = json.decode(response.body);
-    return {
-      'statusCode': response.statusCode,
-      'body': responseData,
-    };
-  } catch (e) {
-    debugPrint('Error removing item: $e');
-    return {
-      'statusCode': 500,
-      'body': {'error': e.toString()},
-    };
+      final responseData = json.decode(response.body);
+      return {
+        'statusCode': response.statusCode,
+        'body': responseData,
+      };
+    } catch (e) {
+      debugPrint('Error removing item: $e');
+      return {
+        'statusCode': 500,
+        'body': {'error': e.toString()},
+      };
+    }
   }
-}
 
   // Cập nhật số lượng sản phẩm
   static Future<Map<String, dynamic>> updateQuantity({
-  required String userId,
-  required String productId,
-  required int newQuantity,
-}) async {
-  try {
-    final response = await http.put(
-      Uri.parse(AppConfig.getApiUrl('/cart/updateCartQuantity')),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'userId': userId,
-        'productId': productId,
-        'newQuantity': newQuantity,
-      }),
-    ).timeout(const Duration(seconds: 10));
+    required String userId,
+    required String productId,
+    required int newQuantity,
+  }) async {
+    try {
+      final response = await http
+          .put(
+            Uri.parse(AppConfig.getApiUrl('/cart/updateCartQuantity')),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'userId': userId,
+              'productId': productId,
+              'newQuantity': newQuantity,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
-    final responseData = json.decode(response.body);
-    return {
-      'statusCode': response.statusCode,
-      'body': responseData,
-    };
-  } catch (e) {
-    debugPrint('Error updating quantity: $e');
-    return {
-      'statusCode': 500,
-      'body': {'error': e.toString()},
-    };
+      final responseData = json.decode(response.body);
+      return {
+        'statusCode': response.statusCode,
+        'body': responseData,
+      };
+    } catch (e) {
+      debugPrint('Error updating quantity: $e');
+      return {
+        'statusCode': 500,
+        'body': {'error': e.toString()},
+      };
+    }
   }
-}
+
   // Lấy tổng giá giỏ hàng (tuỳ chọn)
   static Future<double> getCartTotal(String userId) async {
     try {
