@@ -69,7 +69,7 @@ class CartService {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        final products = responseData['data']?['products'] as List? ?? [];
+        final products = responseData['data']?['items'] as List? ?? [];
 
         return products.map((item) {
           return CartItem.fromJson(item);
