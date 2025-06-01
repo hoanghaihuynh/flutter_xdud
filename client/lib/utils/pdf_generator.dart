@@ -88,7 +88,7 @@ class InvoiceService {
               pw.SizedBox(height: 15),
 
               // 4. Bảng chi tiết sản phẩm
-              _buildProductsTable(order.products, ttfRegular, ttfBold),
+              _buildProductsTable(order.items, ttfRegular, ttfBold),
               pw.SizedBox(height: 5),
               pw.Divider(),
               pw.SizedBox(height: 5),
@@ -139,63 +139,129 @@ class InvoiceService {
 
   // Hàm tiện ích để xây dựng bảng sản phẩm
   static pw.Widget _buildProductsTable(
-      List<OrderProduct> products, pw.Font regularFont, pw.Font boldFont) {
-    final headers = ['#', 'Tên sản phẩm', 'SL', 'Đ.Giá', 'T.Tiền'];
-    final data = products.asMap().entries.map((entry) {
+      List<OrderItem> items, pw.Font regularFont, pw.Font boldFont) {
+    // Đổi tên tham số từ products sang items cho rõ ràng
+    final headers = [
+      '#',
+      'Tên mục',
+      'SL',
+      'Đ.Giá',
+      'T.Tiền'
+    ]; // Đổi "Tên sản phẩm" thành "Tên mục"
+
+    final data = items.asMap().entries.map((entry) {
       int idx = entry.key;
-      OrderProduct item = entry.value;
-      String itemName = item.product.name;
-      List<String> notes = [];
-      if (item.note.size.isNotEmpty) notes.add("Size: ${item.note.size}");
-      if (item.note.sugarLevel.isNotEmpty)
-        notes.add("Đường: ${item.note.sugarLevel.replaceAll(' SL', '%')}");
-      if (item.note.toppings.isNotEmpty)
-        notes.add("Topping: ${item.note.toppings.join(', ')}");
-      // Thêm giá topping vào tổng giá sản phẩm (nếu cần)
-      // Hoặc bạn có thể hiển thị giá topping như một dòng riêng hoặc cộng vào giá sản phẩm
-      double itemTotal =
-          item.price * item.quantity + (item.note.toppingPrice * item.quantity);
+      OrderItem item = entry.value;
+
+      // Lấy tên mục (sản phẩm hoặc combo)
+      String itemNameString = item.name;
+
+      List<pw.Widget> itemDescriptionWidgets = [
+        pw.Text(itemNameString,
+            style: pw.TextStyle(font: boldFont, fontSize: 9)),
+      ];
+
+      // Xử lý ghi chú tùy theo itemType
+      if (item.itemType == "PRODUCT") {
+        List<String> productNotes = [];
+        if (item.note.size != null && item.note.size!.isNotEmpty) {
+          productNotes.add("Size: ${item.note.size}");
+        }
+        if (item.note.sugarLevel != null && item.note.sugarLevel!.isNotEmpty) {
+          productNotes
+              .add("Đường: ${item.note.sugarLevel!.replaceAll(' SL', '%')}");
+        }
+        if (productNotes.isNotEmpty) {
+          itemDescriptionWidgets.add(pw.Text(productNotes.join(" / "),
+              style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700)));
+        }
+
+        if (item.note.toppings.isNotEmpty) {
+          itemDescriptionWidgets.add(pw.Text("Topping:",
+              style: pw.TextStyle(
+                  fontSize: 7.5,
+                  color: PdfColors.grey700,
+                  fontStyle: pw.FontStyle.italic)));
+          for (var topping in item.note.toppings) {
+            itemDescriptionWidgets.add(pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 5),
+              child: pw.Text(
+                  "• ${topping.name} (+${_formatCurrency(topping.price)})", // Hiển thị cả giá topping
+                  style: pw.TextStyle(fontSize: 7.0, color: PdfColors.grey600)),
+            ));
+          }
+        }
+      } else if (item.itemType == "COMBO") {
+        if (item.note.comboProductsSnapshot != null &&
+            item.note.comboProductsSnapshot!.isNotEmpty) {
+          itemDescriptionWidgets.add(pw.Text("Chi tiết combo:",
+              style: pw.TextStyle(
+                  fontSize: 7.5,
+                  color: PdfColors.grey700,
+                  fontStyle: pw.FontStyle.italic)));
+          for (var snapshotItem in item.note.comboProductsSnapshot!) {
+            String detail =
+                "• ${snapshotItem.quantityInCombo}x ${snapshotItem.name}";
+            if (snapshotItem.defaultSize != null &&
+                snapshotItem.defaultSize!.isNotEmpty) {
+              detail += " (Size: ${snapshotItem.defaultSize})";
+            }
+            if (snapshotItem.defaultSugarLevel != null &&
+                snapshotItem.defaultSugarLevel!.isNotEmpty) {
+              detail +=
+                  " (${snapshotItem.defaultSugarLevel!.replaceAll(' SL', '%')})";
+            }
+            itemDescriptionWidgets.add(pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 5),
+              child: pw.Text(detail,
+                  style: pw.TextStyle(fontSize: 7.0, color: PdfColors.grey600)),
+            ));
+          }
+        }
+      }
+
+      // Đơn giá = giá gốc sản phẩm/combo + tổng giá topping (nếu là PRODUCT)
+      double unitPriceWithToppings =
+          item.price + item.toppingPrice; // item.toppingPrice sẽ là 0 cho COMBO
+      // Thành tiền = Đơn giá (đã gồm topping) * số lượng
+      double lineItemTotal = unitPriceWithToppings * item.quantity;
 
       return [
         (idx + 1).toString(),
-        pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-          pw.Text(itemName, style: pw.TextStyle(font: boldFont, fontSize: 9)),
-          if (notes.isNotEmpty)
-            pw.Text(notes.join(" / "),
-                style: pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700)),
-        ]),
+        pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: itemDescriptionWidgets),
         item.quantity.toString(),
-        _formatCurrency(item.price +
-            item.note.toppingPrice), // Đơn giá đã bao gồm topping (nếu có)
         _formatCurrency(
-            itemTotal), // Thành tiền (đã nhân số lượng và bao gồm topping)
+            unitPriceWithToppings), // Đơn giá đã bao gồm topping (nếu có)
+        _formatCurrency(lineItemTotal), // Thành tiền
       ];
     }).toList();
 
     return pw.Table.fromTextArray(
-        headers: headers,
-        data: data,
-        border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
-        headerStyle:
-            pw.TextStyle(font: boldFont, fontSize: 9, color: PdfColors.white),
-        headerDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey700),
-        cellHeight: 25,
-        cellAlignments: {
-          0: pw.Alignment.centerRight, // #
-          1: pw.Alignment.centerLeft, // Tên SP
-          2: pw.Alignment.center, // SL
-          3: pw.Alignment.centerRight, // Đ.Giá
-          4: pw.Alignment.centerRight, // T.Tiền
-        },
-        cellStyle: pw.TextStyle(fontSize: 8.5),
-        columnWidths: {
-          // Điều chỉnh độ rộng các cột
-          0: const pw.FixedColumnWidth(20), // #
-          1: const pw.FlexColumnWidth(3.5), // Tên SP
-          2: const pw.FixedColumnWidth(25), // SL
-          3: const pw.FlexColumnWidth(1.5), // Đ.Giá
-          4: const pw.FlexColumnWidth(1.8), // T.Tiền
-        });
+      headers: headers,
+      data: data,
+      border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      headerStyle:
+          pw.TextStyle(font: boldFont, fontSize: 9, color: PdfColors.white),
+      headerDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey700),
+      cellHeight: 25,
+      cellAlignments: {
+        0: pw.Alignment.centerRight,
+        1: pw.Alignment.centerLeft,
+        2: pw.Alignment.center,
+        3: pw.Alignment.centerRight,
+        4: pw.Alignment.centerRight,
+      },
+      cellStyle: pw.TextStyle(fontSize: 8.5),
+      columnWidths: {
+        0: const pw.FixedColumnWidth(20),
+        1: const pw.FlexColumnWidth(3.5),
+        2: const pw.FixedColumnWidth(25),
+        3: const pw.FlexColumnWidth(1.5),
+        4: const pw.FlexColumnWidth(1.8),
+      },
+    );
   }
 
   // Hàm tiện ích để xây dựng các dòng trong phần tổng kết

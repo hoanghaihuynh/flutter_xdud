@@ -63,8 +63,6 @@ class OrderCard extends StatelessWidget {
 
   OrderCard({Key? key, required this.order}) : super(key: key);
 
-
-
   Future<void> _printInvoice(BuildContext context, Order currentOrder) async {
     // Hiển thị loading (tùy chọn)
     showDialog(
@@ -191,7 +189,7 @@ class OrderCard extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 8),
-            ...order.products.map((item) => Padding(
+            ...order.items.map((item) => Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,32 +202,40 @@ class OrderCard extends StatelessWidget {
                                   const TextStyle(fontWeight: FontWeight.bold)),
                           Expanded(
                             child: Text(
-                              item.product.name,
+                              item.name, // <<--- THAY ĐỔI: item.product.name -> item.name
                               style:
                                   const TextStyle(fontWeight: FontWeight.w500),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            // Hiển thị tổng tiền cho dòng sản phẩm này (giá * số lượng)
-                            formatCurrency(item.price * item.quantity),
+                            // Tổng tiền cho dòng này: item.price (giá 1 unit) * item.quantity
+                            // Nếu item.price đã bao gồm topping price rồi thì không cần cộng item.toppingPrice nữa.
+                            // Model OrderItem của chúng ta có item.price (chưa gồm topping) và item.toppingPrice (giá topping của 1 unit)
+                            formatCurrency((item.price + item.toppingPrice) *
+                                item.quantity),
                             style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
                       // Hiển thị thông tin size, sugar level, toppings
-                      if (item.note.size.isNotEmpty ||
-                          item.note.sugarLevel.isNotEmpty)
+                      if (item.itemType == "PRODUCT" &&
+                          (item.note.size?.isNotEmpty == true ||
+                              item.note.sugarLevel?.isNotEmpty == true))
                         Padding(
-                          padding: const EdgeInsets.only(
-                              top: 4, left: 10), // Thụt vào một chút
+                          padding: const EdgeInsets.only(top: 4, left: 10),
                           child: Text(
-                            "${item.note.size.isNotEmpty ? 'Size: ${item.note.size}' : ''}${item.note.size.isNotEmpty && item.note.sugarLevel.isNotEmpty ? ', ' : ''}${item.note.sugarLevel.isNotEmpty ? 'Sugar: ${item.note.sugarLevel.replaceAll(' SL', '%')}' : ''}",
+                            "${item.note.size?.isNotEmpty == true ? 'Size: ${item.note.size}' : ''}"
+                            "${item.note.size?.isNotEmpty == true && item.note.sugarLevel?.isNotEmpty == true ? ', ' : ''}"
+                            "${item.note.sugarLevel?.isNotEmpty == true ? 'Sugar: ${item.note.sugarLevel!.replaceAll(' SL', '%')}' : ''}",
                             style: const TextStyle(
                                 fontSize: 13, color: Colors.black54),
                           ),
                         ),
-                      if (item.note.toppings.isNotEmpty)
+
+                      // Hiển thị toppings (cho PRODUCT)
+                      if (item.itemType == "PRODUCT" &&
+                          item.note.toppings.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 4, left: 10),
                           child: Column(
@@ -238,36 +244,61 @@ class OrderCard extends StatelessWidget {
                               const Text(
                                 'Toppings:',
                                 style: TextStyle(
-                                    fontSize: 13, color: Colors.black54),
+                                    fontSize: 13,
+                                    color: Colors.black54,
+                                    fontWeight: FontWeight.w500),
                               ),
                               Padding(
                                 padding:
                                     const EdgeInsets.only(left: 10.0, top: 2.0),
-                                child: Wrap(
-                                  spacing: 6,
-                                  runSpacing: 0,
+                                child: Column(
+                                  // Hiển thị mỗi topping trên một dòng kèm giá
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: item.note.toppings.map((topping) {
                                     return Text(
-                                      '• $topping', // Thêm dấu chấm đầu dòng
+                                      '• ${topping.name} (+${formatCurrency(topping.price)})', // <<--- THAY ĐỔI
                                       style: const TextStyle(
                                           fontSize: 12, color: Colors.black54),
                                     );
                                   }).toList(),
                                 ),
                               ),
-                              // Hiển thị tổng tiền topping cho dòng sản phẩm này (giá topping * số lượng)
-                              if (item.note.toppingPrice > 0)
-                                Padding(
+                              // Tổng tiền topping đã được cộng vào dòng tổng ở trên thông qua item.toppingPrice
+                            ],
+                          ),
+                        ),
+
+                      // Hiển thị các sản phẩm con trong COMBO
+                      if (item.itemType == "COMBO" &&
+                          item.note.comboProductsSnapshot != null &&
+                          item.note.comboProductsSnapshot!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6, left: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Chi tiết combo:',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade700,
+                                    fontStyle: FontStyle.italic),
+                              ),
+                              ...item.note.comboProductsSnapshot!
+                                  .map((snapshotItem) {
+                                return Padding(
                                   padding:
-                                      const EdgeInsets.only(top: 2, left: 10.0),
+                                      const EdgeInsets.only(top: 2, left: 10),
                                   child: Text(
-                                    '+ ${formatCurrency(item.note.toppingPrice * item.quantity)} (toppings)',
+                                    '• ${snapshotItem.quantityInCombo}x ${snapshotItem.name}'
+                                    '${snapshotItem.defaultSize?.isNotEmpty == true ? " (Size: ${snapshotItem.defaultSize})" : ""}'
+                                    '${snapshotItem.defaultSugarLevel?.isNotEmpty == true ? " (${snapshotItem.defaultSugarLevel!.replaceAll(' SL', '%')})" : ""}',
                                     style: TextStyle(
-                                      fontSize: 12,
-                                      color: Theme.of(context).primaryColorDark,
-                                    ),
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600),
                                   ),
-                                ),
+                                );
+                              }).toList(),
                             ],
                           ),
                         ),

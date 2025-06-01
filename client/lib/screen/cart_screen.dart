@@ -342,10 +342,11 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<dynamic> _insertOrder(
-      {String paymentMethod = "VNPAY", String? orderId}) async {
+      {String paymentMethod = "VNPAY",
+      String? orderId /* Thường không dùng orderId khi tạo mới */}) async {
     try {
-      if (!mounted) return null; // Return null on failure or if not mounted
-      setState(() => _isLoading = true); // Sử dụng _isLoading chung
+      if (!mounted) return null;
+      setState(() => _isLoading = true);
       final userId = await getUserId();
 
       if (userId == null || userId.isEmpty) {
@@ -358,40 +359,66 @@ class _CartScreenState extends State<CartScreen> {
         if (mounted) setState(() => _isLoading = false);
         return null;
       }
-      // KIỂM TRA NẾU CHƯA CHỌN BÀN
       if (_selectedTable == null) {
         _showSnackBar('Vui lòng chọn bàn trước khi đặt hàng.', isError: true);
         if (mounted) setState(() => _isLoading = false);
         return null;
       }
 
-      final productList = _cartItems.map((item) {
+      // Xây dựng danh sách items gửi lên backend
+      final List<Map<String, dynamic>> itemsListForOrder =
+          _cartItems.map((cartItem) {
+        // Giả sử CartItem của bạn có trường 'itemType' và 'comboId'
+        // Nếu không, bạn cần logic để xác định itemType dựa trên dữ liệu cartItem
+        // Ví dụ: String itemType = (cartItem.comboId != null && cartItem.comboId!.isNotEmpty) ? "COMBO" : "PRODUCT";
+        // Hoặc nếu CartItem có trường isCombo: bool
+
+        // Cần đảm bảo cartItem.itemType đã được thiết lập đúng khi thêm vào giỏ hàng
+        // hoặc có một cách đáng tin cậy để suy ra itemType ở đây.
+        // Ví dụ, nếu cartItem.productId dùng cho cả product ID và combo ID,
+        // và bạn có một trường khác để phân biệt (ví dụ isCombo: true/false)
+
+        // Dựa theo CartItem model chúng ta đã thảo luận (có itemType và comboId riêng biệt):
+        String itemType =
+            cartItem.itemType ?? "PRODUCT"; // Mặc định là PRODUCT nếu null
+        String? idToSendForProduct;
+        String? idToSendForCombo;
+
+        if (itemType == "PRODUCT") {
+          idToSendForProduct = cartItem.productId;
+        } else {
+          // COMBO
+          idToSendForCombo = cartItem.comboId ??
+              cartItem.productId; // Ưu tiên cartItem.comboId nếu có
+        }
+
         return {
-          "product_id": item.productId,
-          "quantity": item.quantity,
-          "price": item.price,
-          "toppingPrice": item.toppingPrice,
+          "itemType": itemType,
+          if (idToSendForProduct != null) "product_id": idToSendForProduct,
+          if (idToSendForCombo != null) "combo_id": idToSendForCombo,
+          "quantity": cartItem.quantity,
           "note": {
-            "size": item.size,
-            "sugarLevel": item.sugarLevel,
-            "toppings": item.toppings,
+            "size": cartItem.size,
+            "sugarLevel": cartItem.sugarLevel,
+            // Đối với PRODUCT, gửi danh sách ID topping.
+            // Giả sử cartItem.toppings là List<String> chứa ID topping.
+            // Đối với COMBO, note.toppings thường rỗng ở cấp độ item chính của combo.
+            "toppings": (itemType == "PRODUCT") ? cartItem.toppings : [],
           }
+          // Backend sẽ lấy/tính: name, price, imageUrl, toppingPrice, comboProductsSnapshot
         };
       }).toList();
 
       final orderData = {
         "user_id": userId,
-        "products": productList,
-        "subtotal": subtotalPrice,
-        "discount_amount": _discountAmount,
-        "voucher_code": _appliedVoucherCode,
-        "total": _finalPrice,
+        "items": itemsListForOrder, // <<--- Đã sử dụng itemsListForOrder
         "payment_method": paymentMethod,
-        "status": "pending",
-        "created_at": DateTime.now().toIso8601String(),
-        "table_id": _selectedTable!.id, // <<--- THÊM table_id
-        "table_number": _selectedTable!.tableNumber, // <<--- THÊM table_number
-        if (orderId != null) "order_id": orderId,
+        "table_id": _selectedTable!.id,
+        "table_number": _selectedTable!.tableNumber,
+        if (_appliedVoucherCode != null && _appliedVoucherCode!.isNotEmpty)
+          "voucher_code": _appliedVoucherCode,
+        // Các trường subtotal, discount_amount, total, status, created_at sẽ do backend xử lý.
+        // if (orderId != null) "order_id": orderId, // Chỉ gửi nếu bạn có logic cập nhật đơn hàng nháp cụ thể
       };
 
       debugPrint('Order Data to be sent: ${jsonEncode(orderData)}');
@@ -408,35 +435,53 @@ class _CartScreenState extends State<CartScreen> {
       print('Insert order response: $responseData');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Cập nhật trạng thái bàn sau khi đặt hàng thành công
-        // (trước khi xóa giỏ hàng hoặc chuyển trang)
         bool tableUpdated = await _updateSelectedTableStatusAsOccupied();
         if (!tableUpdated && paymentMethod == "CASH") {
-          // Nếu là CASH và cập nhật bàn thất bại, có thể cần xử lý (ví dụ: không xóa giỏ hàng, thông báo lỗi nghiêm trọng)
-          // Hoặc để backend tự xử lý việc này khi đơn hàng được tạo.
-          // Hiện tại, chỉ log và tiếp tục.
           print(
               "WARNING: Table status update failed for CASH payment after successful order.");
         }
 
         if (paymentMethod != "VNPAY") {
+          // Chỉ xử lý UI nếu không phải VNPAY (VNPAY có luồng riêng)
           _showSnackBar('ĐẶT HÀNG THÀNH CÔNG');
-          await _clearCart();
-          if (mounted) Navigator.pop(context); // Đóng payment modal
+          await _clearCart(); // Xóa giỏ hàng ở client và server
+          if (mounted) {
+            // Đóng modal thanh toán (nếu có) và có thể điều hướng
+            Navigator.of(context).popUntil((route) =>
+                route.isFirst); // Quay về màn hình đầu tiên sau tab bar
+            // Hoặc Navigator.pop(context); nếu chỉ đóng modal
+            // Hoặc điều hướng đến màn hình danh sách đơn hàng:
+            // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => OrderListScreen(userId: userId)));
+          }
         }
-        return responseData; // Trả về data cho VNPAY
+        return responseData; // Trả về data cho VNPAY hoặc xử lý tiếp
       } else {
-        throw responseData['message'] ?? 'Đặt hàng thất bại';
+        throw responseData['error'] ??
+            responseData['message'] ??
+            'Đặt hàng thất bại không rõ nguyên nhân';
       }
     } catch (e) {
-      _showSnackBar(
-          'Lỗi đặt hàng: ${e.toString().replaceAll('Exception: ', '')}',
-          isError: true);
-      rethrow; // Rethrow to be caught by payment processing methods
+      if (mounted) {
+        // Kiểm tra mounted trước khi gọi _showSnackBar hoặc setState
+        _showSnackBar(
+            'Lỗi đặt hàng: ${e.toString().replaceAll('Exception: ', '')}',
+            isError: true);
+      }
+      // Không rethrow ở đây nữa nếu _showSnackBar đã hiển thị lỗi,
+      // trừ khi bạn muốn các hàm gọi _insertOrder tự xử lý thêm.
+      // Nếu rethrow, hàm _processCashPayment và _processVNPayPayment cần try-catch riêng cho nó.
+      // Tạm thời return null để báo hiệu thất bại cho các hàm gọi.
+      return null;
     } finally {
-      if (mounted && paymentMethod != "VNPAY") {
-        // VNPAY handles its own loading state
-        setState(() => _isLoading = false);
+      if (mounted) {
+        // Chỉ tắt loading nếu không phải VNPAY hoặc nếu VNPAY cũng thất bại trước khi chuyển hướng
+        // Hàm _processVNPayPayment sẽ tự quản lý _isProcessingPayment
+        // Nếu dùng _isLoading chung, thì cần cẩn thận hơn.
+        // Nếu _insertOrder được gọi bởi _processCashPayment:
+        if (paymentMethod == "CASH" ||
+            _isProcessingPayment == false /* Ví dụ VNPAY lỗi sớm */) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
