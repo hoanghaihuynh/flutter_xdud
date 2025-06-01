@@ -7,15 +7,20 @@ class Product {
   final double price; // Đối với combo, đây là giá của COMBO
   final String description;
   final String category; // Đối với combo, category sẽ được gán là "Combo"
-  final int stock; // Đối với combo, stock có thể hiểu là số lượng combo có thể bán
+  final int
+      stock; // Đối với combo, stock có thể hiểu là số lượng combo có thể bán
   final String imageUrl;
-  final List<String> sizes; // Đối với combo, trường này có thể là danh sách rỗng
-  final List<String> sugarLevels; // Đối với combo, trường này có thể là danh sách rỗng
-  final List<String> toppingIds; // Đối với combo, trường này có thể là danh sách rỗng
+  final List<String>
+      sizes; // Đối với combo, trường này có thể là danh sách rỗng
+  final List<String>
+      sugarLevels; // Đối với combo, trường này có thể là danh sách rỗng
+  final List<String>
+      toppingIds; // Đối với combo, trường này có thể là danh sách rỗng
 
   // --- THÊM CÁC TRƯỜNG SAU ---
   final bool isCombo;
-    final List<ComboProductConfigItem>? detailedComboItems;  // Danh sách các sản phẩm con trong combo
+  final List<ComboProductConfigItem>?
+      detailedComboItems; // Danh sách các sản phẩm con trong combo
 
   Product({
     required this.id,
@@ -39,16 +44,20 @@ class Product {
       name: json['name'],
       price: (json['price'] as num?)?.toDouble() ?? 0.0, // An toàn hơn với num?
       description: json['description'] ?? '',
-      category: json['category'] ?? 'Coffee', // Gán category mặc định nếu API không trả về
+      category: json['category'] ??
+          'Coffee', // Gán category mặc định nếu API không trả về
       stock: json['stock'] ?? 0,
       imageUrl: json['imageUrl'] ?? 'https://via.placeholder.com/150',
-      sizes: List<String>.from(json['size'] as List<dynamic>? ?? ['M']), // Xử lý an toàn nếu 'size' là null
-      sugarLevels: List<String>.from(json['sugarLevel'] as List<dynamic>? ?? ['50 SL']), // Xử lý an toàn
+      sizes: List<String>.from(json['size'] as List<dynamic>? ??
+          ['M']), // Xử lý an toàn nếu 'size' là null
+      sugarLevels: List<String>.from(
+          json['sugarLevel'] as List<dynamic>? ?? ['50 SL']), // Xử lý an toàn
       toppingIds: (json['toppings'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
-      isCombo: false, // Quan trọng: Sản phẩm parse từ API sản phẩm thường thì isCombo = false
+      isCombo:
+          false, // Quan trọng: Sản phẩm parse từ API sản phẩm thường thì isCombo = false
       detailedComboItems: null, // Không có chi tiết combo cho sản phẩm thường
     );
   }
@@ -56,7 +65,8 @@ class Product {
   // --- THÊM FACTORY CONSTRUCTOR NÀY ---
   // Factory constructor để tạo đối tượng Product đại diện cho một COMBO
   // từ đối tượng Combo (mà bạn parse từ API combo, ví dụ class Combo trong combo_model.dart)
-  factory Product.fromApiCombo(Combo apiCombo) { // Combo ở đây là class Combo từ combo_model.dart
+  factory Product.fromApiCombo(Combo apiCombo) {
+    // Combo ở đây là class Combo từ combo_model.dart
     return Product(
       id: apiCombo.id, // ID của combo
       name: apiCombo.name, // Tên của combo
@@ -69,7 +79,8 @@ class Product {
       sugarLevels: [],
       toppingIds: [],
       isCombo: true, // Quan trọng: Đánh dấu đây là combo
-      detailedComboItems: apiCombo.products, // Gán danh sách ProductItem từ Combo API
+      detailedComboItems:
+          apiCombo.products, // Gán danh sách ProductItem từ Combo API
     );
   }
 
@@ -86,7 +97,8 @@ class Product {
         'toppings': toppingIds,
         // --- THÊM CÁC TRƯỜNG SAU KHI SERIALIZE ---
         'isCombo': isCombo,
-        'detailedComboItems': detailedComboItems?.map((item) => item.toJson()).toList(),
+        'detailedComboItems':
+            detailedComboItems?.map((item) => item.toJson()).toList(),
         // Lưu ý: ProductItem cũng cần có phương thức toJson()
       };
 }

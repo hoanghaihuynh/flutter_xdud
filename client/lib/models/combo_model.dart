@@ -161,7 +161,8 @@ class Combo {
       description: json['description'] as String? ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       products: productsData,
-      imageUrl: json['imageUrl'] as String? ?? 'https://via.placeholder.com/200',
+      imageUrl:
+          json['imageUrl'] as String? ?? 'https://via.placeholder.com/200',
       category: json['category'] as String? ?? 'N/A',
       isActive: json['isActive'] as bool? ?? false,
       createdAt: _parseSafeDateTime(json['createdAt'] as String?),
@@ -183,11 +184,7 @@ class Combo {
       '__v': v,
     };
   }
-
-  
 }
-
-
 
 class DeleteResponseMessage {
   final String message;
@@ -212,9 +209,11 @@ DeleteResponseMessage parseDeleteResponseMessage(String responseBody) {
 List<Combo> parseCombos(String responseBody) {
   try {
     final parsed = json.decode(responseBody);
-    if (parsed == null || parsed is! List) { // Kiểm tra null và kiểu List
-        print("Error: Expected a List of combos but received: ${parsed?.runtimeType}");
-        return []; // Trả về rỗng nếu không phải List
+    if (parsed == null || parsed is! List) {
+      // Kiểm tra null và kiểu List
+      print(
+          "Error: Expected a List of combos but received: ${parsed?.runtimeType}");
+      return []; // Trả về rỗng nếu không phải List
     }
     return parsed
         .cast<Map<String, dynamic>>() // Ép kiểu từng phần tử sang Map

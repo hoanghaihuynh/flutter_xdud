@@ -3,6 +3,7 @@ import 'package:myproject/config/config.dart';
 import 'package:myproject/models/inserted_combo_data.dart';
 import 'dart:convert';
 import '../models/combo_model.dart';
+import '../models/combo_product_config_item.dart';
 
 class ComboService {
   // Hàm lấy tất cả combo
@@ -44,11 +45,11 @@ class ComboService {
   Future<InsertedComboData> insertCombo({
     required String name,
     required String description,
-    required List<String>
-        productIds, // Danh sách ID của các sản phẩm trong combo
+    required List<ComboProductConfigItem>
+        productsConfig, // <<--- THÀNH THAM SỐ NÀY
     required String imageUrl,
     required double price,
-    String? authToken, // Token xác thực (tùy chọn)
+    String? authToken,
   }) async {
     final Uri uri = Uri.parse(AppConfig.getApiUrl('/combo/insertCombo'));
 
@@ -56,7 +57,10 @@ class ComboService {
     final Map<String, dynamic> requestBody = {
       'name': name,
       'description': description,
-      'products': productIds,
+      // 'products': productIds, // <<--- BỎ DÒNG NÀY
+      'products': productsConfig
+          .map((config) => config.toJson())
+          .toList(), // <<--- GỬI MẢNG OBJECT CONFIG
       'imageUrl': imageUrl,
       'price': price,
     };
@@ -99,13 +103,15 @@ class ComboService {
 
   // Update combo
   Future<InsertedComboData> updateCombo({
-    required String comboId, // ID của combo cần cập nhật
+    required String comboId,
     required String name,
     required String description,
-    required List<String> productIds,
+    // required List<String> productIds, // <<--- THAY ĐỔI THAM SỐ NÀY
+    required List<ComboProductConfigItem>
+        productsConfig, // <<--- THÀNH THAM SỐ NÀY
     required String imageUrl,
     required double price,
-    String? authToken, // Token xác thực (tùy chọn)
+    String? authToken,
   }) async {
     // Xây dựng URL với path parameter
     final Uri uri =
@@ -114,7 +120,9 @@ class ComboService {
     final Map<String, dynamic> requestBody = {
       'name': name,
       'description': description,
-      'products': productIds,
+      'products': productsConfig
+          .map((config) => config.toJson())
+          .toList(), // <<--- GỬI MẢNG OBJECT CONFIG
       'imageUrl': imageUrl,
       'price': price,
     };
