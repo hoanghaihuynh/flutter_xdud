@@ -134,8 +134,6 @@ class _CartScreenState extends State<CartScreen> {
         return;
       }
 
-      // Assuming fetchCartByUserId returns a List<CartItem> directly for now
-      // If it returns a Cart object, you'll need to adjust
       final cartItems = await CartService.fetchCartByUserId(userId);
 
       if (mounted) {
@@ -143,7 +141,7 @@ class _CartScreenState extends State<CartScreen> {
           _cartItems = cartItems;
           _isLoading = false;
           _errorMessage = null;
-          _updateFinalPrice(); // Update final price after cart items are fetched/updated
+          _updateFinalPrice();
         });
       }
     } catch (e) {
@@ -923,8 +921,6 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildCartItem(CartItem item) {
-    // Calculate total price for this specific item including its own topping price and quantity
-    // This is for display per item, not the cart's subtotal
     double itemDisplayTotalPrice =
         (item.price + item.toppingPrice) * item.quantity;
 

@@ -163,4 +163,62 @@ class CartService {
       return 0;
     }
   }
+
+  // Thêm combo vào cart
+  static Future<bool> addComboToCart({
+    required String userId,
+    required String comboId,
+    required int quantity,
+    required BuildContext context, // Để hiển thị SnackBar
+  }) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    try {
+      final response = await http
+          .post(
+            Uri.parse(
+                AppConfig.getApiUrl('/cart/addCombo')), // Endpoint của bạn
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'userId': userId,
+              'comboId': comboId,
+              'quantity': quantity,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Kiểm tra cả 200 và 201
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(
+                responseData['message'] ?? 'Combo đã được thêm vào giỏ hàng.'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return true;
+      } else {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(
+                responseData['message'] ?? 'Lỗi khi thêm combo vào giỏ hàng.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return false;
+      }
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Lỗi kết nối khi thêm combo: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return false;
+    }
+  }
 }
