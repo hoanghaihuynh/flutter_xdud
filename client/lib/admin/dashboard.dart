@@ -170,6 +170,18 @@ class AdminDashboard extends StatelessWidget {
             _buildDashboardCard(
               context,
               Icons.table_bar,
+              'Table Management',
+              Colors.blueAccent,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TableScreen()),
+                );
+              },
+            ),
+            _buildDashboardCard(
+              context,
+              Icons.table_bar,
               'Combo Management',
               Colors.red,
               () {
