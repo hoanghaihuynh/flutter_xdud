@@ -6,55 +6,88 @@ exports.insertOrder = async (req, res) => {
   try {
     const orderData = req.body;
 
-    // Validate payment_method trước
     if (!orderData.payment_method) {
       return res.status(400).json({ error: "Thiếu phương thức thanh toán" });
     }
 
-    // Validate products
+    // Validate items
     if (
-      !orderData.products ||
-      !Array.isArray(orderData.products) ||
-      orderData.products.length === 0
+      !orderData.items || // << THAY ĐỔI: products -> items
+      !Array.isArray(orderData.items) ||
+      orderData.items.length === 0
     ) {
-      return res.status(400).json({ error: "Danh sách sản phẩm không hợp lệ" });
+      return res.status(400).json({ error: "Danh sách items không hợp lệ" });
     }
 
-    for (const product of orderData.products) {
+    // Validate từng item trong items (có thể làm sâu hơn trong service)
+    for (const item of orderData.items) {
       if (
-        !orderData.products[0].note.size ||
-        !orderData.products[0].note.sugarLevel
+        !item.itemType ||
+        (item.itemType !== "PRODUCT" && item.itemType !== "COMBO")
       ) {
-        return res
-          .status(400)
-          .json({ error: "Thiếu size hoặc sugarLevel cho sản phẩm" });
+        return res.status(400).json({
+          error: `itemType không hợp lệ cho item: ${item.name || "Không tên"}`,
+        });
+      }
+      if (item.itemType === "PRODUCT") {
+        if (!item.product_id) {
+          return res
+            .status(400)
+            .json({ error: "Thiếu product_id cho item loại PRODUCT" });
+        }
+        // Validate size và sugarLevel cho product vẫn giữ như cũ nếu frontend gửi lên
+        if (!item.note?.size || !item.note?.sugarLevel) {
+          return res
+            .status(400)
+            .json({ error: "Thiếu size hoặc sugarLevel cho sản phẩm đơn lẻ" });
+        }
+      } else if (item.itemType === "COMBO") {
+        if (!item.combo_id) {
+          return res
+            .status(400)
+            .json({ error: "Thiếu combo_id cho item loại COMBO" });
+        }
+        // Combo có thể không yêu cầu size/sugarLevel ở cấp độ item chính của combo
+      }
+      if (!item.quantity || item.quantity < 1) {
+        return res.status(400).json({
+          error: `Số lượng không hợp lệ cho item: ${item.name || "Không tên"}`,
+        });
       }
     }
 
-    // Nếu mọi thứ ổn, insert order
     const newOrder = await orderService.insertOrder(orderData);
 
-    // Tạo URL thanh toán VNPay
-    const paymentUrl = VNPayService.createPaymentUrl(
-      newOrder._id,
-      newOrder.total,
-      null,
-      `Thanh toán đơn hàng #${newOrder._id}`
-    );
+    // Tạo URL thanh toán VNPay (nếu phương thức là VNPay)
+    let paymentUrl = null;
+    if (
+      orderData.payment_method.toUpperCase() === "VNPAY" &&
+      newOrder.total > 0
+    ) {
+      // Chỉ tạo URL nếu có tổng tiền
+      paymentUrl = VNPayService.createPaymentUrl(
+        newOrder._id.toString(), // Đảm bảo _id là string
+        newOrder.total,
+        req.ip, // Lấy IP từ request nếu VNPayService cần
+        `Thanh toan don hang #${newOrder._id}`
+      );
+    }
 
     res.status(200).json({
-      status: 200,
-      success: "Tạo order thành công",
+      // Sử dụng 201 cho tạo mới thành công sẽ đúng chuẩn REST hơn
+      status: 200, // Hoặc 201
+      message: "Tạo đơn hàng thành công", // Sửa success thành message
       data: {
         order: newOrder,
-        paymentUrl: paymentUrl,
+        paymentUrl: paymentUrl, // Có thể là null nếu không phải VNPay hoặc total=0
       },
     });
   } catch (error) {
+    console.error("insertOrder Controller Error:", error.message);
     res.status(500).json({
       status: 500,
-      error: "Có lỗi khi tạo đơn hàng order controller",
-      message: error.message,
+      error: "Lỗi khi tạo đơn hàng: " + error.message, // Trả về message lỗi rõ ràng hơn
+      // message: error.message, // Dòng này có thể dư thừa nếu error đã có message
     });
   }
 };

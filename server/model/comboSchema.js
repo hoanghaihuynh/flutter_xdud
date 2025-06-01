@@ -3,34 +3,39 @@ const db = require("./../config/db");
 
 const { Schema } = mongoose;
 
-const ComboProductItemSchema = new Schema({
+const ComboProductItemSchema = new Schema(
+  {
     productId: {
-        type: Schema.Types.ObjectId,
-        ref: "products", 
-        required: true
+      type: Schema.Types.ObjectId,
+      ref: "products",
+      required: true,
     },
-    quantityInCombo: { 
-        type: Number,
-        required: true,
-        min: 1,
-        default: 1
+    quantityInCombo: {
+      type: Number,
+      required: true,
+      min: 1,
+      default: 1,
     },
     defaultSize: {
-        type: String,
-        enum: ["M", "L"], // Lấy từ cartSchema của bạn
-        required: true // Mỗi sản phẩm trong combo cần có size mặc định
+      type: String,
+      enum: ["M", "L"], // Lấy từ cartSchema của bạn
+      required: true, // Mỗi sản phẩm trong combo cần có size mặc định
     },
     defaultSugarLevel: {
-        type: String,
-        enum: ["0 SL", "50 SL", "75 SL"], // Lấy từ cartSchema của bạn
-        required: true // Mỗi sản phẩm trong combo cần có mức đường mặc định
+      type: String,
+      enum: ["0 SL", "50 SL", "75 SL"], // Lấy từ cartSchema của bạn
+      required: true, // Mỗi sản phẩm trong combo cần có mức đường mặc định
     },
-    defaultToppings: [{ // Mảng các ID của topping mặc định
+    defaultToppings: [
+      {
+        // Mảng các ID của topping mặc định
         type: Schema.Types.ObjectId,
-        ref: 'toppings' // Tên model Topping của bạn (ví dụ: 'Topping' hoặc 'toppings')
-    }]
-}, { _id: false }); // Không cần _id cho subdocument này nếu bạn không truy vấn nó trực tiếp
-
+        ref: "toppings", // Tên model Topping của bạn (ví dụ: 'Topping' hoặc 'toppings')
+      },
+    ],
+  },
+  { _id: false }
+); // Không cần _id cho subdocument này nếu bạn không truy vấn nó trực tiếp
 
 // --- SCHEMA CHÍNH CHO COMBO ---
 const comboSchema = new Schema(
@@ -44,7 +49,8 @@ const comboSchema = new Schema(
       type: String,
       trim: true,
     },
-    price: { // Giá của TOÀN BỘ combo
+    price: {
+      // Giá của TOÀN BỘ combo
       type: Number,
       required: true,
       min: 0,
@@ -55,14 +61,16 @@ const comboSchema = new Schema(
       trim: true,
       default: "https://via.placeholder.com/300x200",
     },
-    category: { // Thêm trường này để dễ phân loại
-        type: String,
-        default: 'Combo',
-        trim: true
+    category: {
+      // Thêm trường này để dễ phân loại
+      type: String,
+      default: "Combo",
+      trim: true,
     },
-    isActive: { // Cho biết combo có đang được bán hay không
-        type: Boolean,
-        default: true
+    isActive: {
+      // Cho biết combo có đang được bán hay không
+      type: Boolean,
+      default: true,
     },
   },
   { timestamps: true }
@@ -71,4 +79,3 @@ const comboSchema = new Schema(
 const ComboModel = db.model("combos", comboSchema); // Đặt tên biến là ComboModel cho rõ
 
 module.exports = ComboModel; // Export Model
-
