@@ -9,6 +9,7 @@ import './../services/combo_service.dart';
 import './../widgets/coffee_card.dart';
 import './cart_screen.dart';
 import './comboDetail_screen.dart';
+import 'package:flutter_swiper_view/flutter_swiper_view.dart';
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({Key? key}) : super(key: key);
@@ -177,12 +178,78 @@ class _ShopScreenState extends State<ShopScreen> {
               onRefresh: _fetchAllData,
               child: Column(
                 children: [
+                  // --- CAROUSEL COMBO ĐÃ CẬP NHẬT ---
+                  if (_fetchedCombos.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          top: 16.0, bottom: 8.0, left: 16.0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "Ưu đãi Combo ✨",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // SỬ DỤNG Swiper WIDGET TẠI ĐÂY
+                    SizedBox(
+                      height: 190, // Điều chỉnh chiều cao tổng thể của carousel
+                      child: Swiper(
+                        itemBuilder: (BuildContext context, int index) {
+                          final combo = _fetchedCombos[index];
+                          return ComboCarouselItem(
+                            // Widget này bạn đã định nghĩa ở cuối file
+                            combo: combo,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ComboDetailScreen(combo: combo),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                        itemCount: _fetchedCombos.length,
+                        itemWidth: MediaQuery.of(context).size.width *
+                            0.8, // Chiều rộng của mỗi item
+                        itemHeight:
+                            170, // Chiều cao của ảnh trong item (hoặc phần chính của item)
+                        layout: SwiperLayout
+                            .DEFAULT, // Các layout khác: STACK, TINDER, CUSTOM
+                        autoplay: true,
+                        autoplayDelay: 4000, // milliseconds
+                        // viewportFraction: 0.8, // Có thể cần cho một số layout để thấy item kế bên
+                        scale:
+                            0.9, // Giảm kích thước item không active (nếu layout hỗ trợ)
+                        pagination: const SwiperPagination(
+                            // Dấu chấm chỉ trang
+                            alignment: Alignment.bottomCenter,
+                            margin: EdgeInsets.all(10.0),
+                            builder: DotSwiperPaginationBuilder(
+                              color: Colors.grey,
+                              activeColor: Colors.green, // Sử dụng màu chủ đạo
+                              size: 8.0,
+                              activeSize: 10.0,
+                            )),
+                        // control: const SwiperControl(), // Nút next/prev (tùy chọn)
+                        loop: _fetchedCombos.length >
+                            1, // Chỉ lặp nếu có nhiều hơn 1 item
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  // --- KẾT THÚC CAROUSEL COMBO ---
+
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: TextField(
                       controller: _searchController,
-                      // onChanged đã được xử lý bởi listener _onSearchChanged
-                      // onChanged: _searchProducts,
                       decoration: InputDecoration(
                         hintText: 'Tìm kiếm sản phẩm, combo...',
                         prefixIcon: const Icon(Icons.search),
@@ -197,11 +264,13 @@ class _ShopScreenState extends State<ShopScreen> {
                                 icon: const Icon(Icons.clear),
                                 onPressed: () {
                                   _searchController.clear();
-                                  // _applyFilterAndSearch(); // Listener sẽ tự động gọi
+                                  _applyFilterAndSearch(); // Gọi sau khi clear
                                 },
                               )
                             : null,
                       ),
+                      onChanged: (query) =>
+                          _applyFilterAndSearch(), // Thêm lại onChanged
                     ),
                   ),
                   SizedBox(
@@ -209,16 +278,14 @@ class _ShopScreenState extends State<ShopScreen> {
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: displayCategories.length,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12), // Giảm padding một chút
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       itemBuilder: (context, index) {
                         final category = displayCategories[index];
                         final bool isSelected = selectedCategory == category;
                         return GestureDetector(
                           onTap: () => filterByCategory(category),
                           child: Container(
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 4), // Giảm margin
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
@@ -242,7 +309,6 @@ class _ShopScreenState extends State<ShopScreen> {
                                     ]
                                   : [
                                       BoxShadow(
-                                        // Thêm shadow nhẹ cho nút không được chọn
                                         color: Colors.black.withOpacity(0.05),
                                         blurRadius: 3,
                                         offset: const Offset(0, 1),
@@ -267,7 +333,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       },
                     ),
                   ),
-                  const SizedBox(height: 10), // Thêm khoảng cách nhỏ
+                  const SizedBox(height: 10),
                   Expanded(
                     child: filteredItems.isEmpty && !isLoading
                         ? Center(
@@ -285,7 +351,7 @@ class _ShopScreenState extends State<ShopScreen> {
                             gridDelegate:
                                 const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
-                              childAspectRatio: 0.65, // Điều chỉnh nếu cần
+                              childAspectRatio: 0.65,
                               crossAxisSpacing: 16,
                               mainAxisSpacing: 16,
                             ),
@@ -293,27 +359,21 @@ class _ShopScreenState extends State<ShopScreen> {
                             itemBuilder: (context, index) {
                               final productOrComboAdapter =
                                   filteredItems[index];
-
-                              // --- LOGIC ĐIỀU HƯỚNG ĐẾN COMBO DETAIL ---
                               return GestureDetector(
                                 onTap: () {
-                                  // Kiểm tra xem item có phải là combo không
-                                  // Dựa trên category hoặc trường isCombo trong model Product của bạn
-                                  if (productOrComboAdapter.category == 'Combo'
-                                      // Hoặc: productOrComboAdapter.isCombo == true (nếu bạn có trường này)
-                                      ) {
-                                    // Tìm Combo gốc từ _fetchedCombos
+                                  if (productOrComboAdapter.category ==
+                                      'Combo') {
                                     Combo? originalCombo =
                                         _fetchedCombos.firstWhere(
                                             (c) =>
                                                 c.id ==
                                                 productOrComboAdapter.id,
-                                            orElse: () =>
-                                                null_combo_sentinel // Trả về một giá trị đặc biệt nếu không tìm thấy
-                                            );
+                                            orElse: () => null_combo_sentinel);
 
                                     if (originalCombo != null &&
-                                        originalCombo != null_combo_sentinel) {
+                                        originalCombo.id !=
+                                            '__null_sentinel__') {
+                                      // Kiểm tra sentinel đúng cách
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -323,7 +383,6 @@ class _ShopScreenState extends State<ShopScreen> {
                                         ),
                                       );
                                     } else {
-                                      // Xử lý trường hợp không tìm thấy Combo gốc (không nên xảy ra nếu logic đúng)
                                       debugPrint(
                                           'Original combo not found for ID: ${productOrComboAdapter.id}');
                                       ScaffoldMessenger.of(context)
@@ -334,7 +393,6 @@ class _ShopScreenState extends State<ShopScreen> {
                                       );
                                     }
                                   } else {
-                                    // Nếu không phải combo, điều hướng đến ProductDetail
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
@@ -374,4 +432,60 @@ class _ShopScreenState extends State<ShopScreen> {
     updatedAt: DateTime.fromMillisecondsSinceEpoch(0), // Hoặc DateTime(1970)
     v: 0, // Giữ nguyên hoặc có thể là null nếu v là int?
   );
+}
+
+class ComboCarouselItem extends StatelessWidget {
+  final Combo combo;
+  final VoidCallback onTap;
+
+  const ComboCarouselItem({
+    Key? key,
+    required this.combo,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12.0),
+          child: Image.network(
+            combo.imageUrl,
+            fit: BoxFit.cover,
+            width: MediaQuery.of(context).size.width * 0.75,
+            height:
+                180, // Chiều cao này sẽ bị ghi đè bởi itemHeight của Swiper nếu có
+            loadingBuilder: (BuildContext context, Widget child,
+                ImageChunkEvent? loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                      : null,
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: MediaQuery.of(context).size.width * 0.75,
+                height: 180, // Tương tự, có thể bị ghi đè
+                decoration: BoxDecoration(
+                  // Thêm decoration cho errorBuilder
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                child:
+                    Icon(Icons.broken_image, color: Colors.grey[600], size: 50),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
 }
