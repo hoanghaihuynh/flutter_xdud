@@ -246,14 +246,14 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
-  void _navigateTo(BuildContext context, String pageName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Navigating to $pageName'),
-        duration: const Duration(milliseconds: 500),
-      ),
-    );
-    // Replace with actual navigation when pages are created
-    // Navigator.push(context, MaterialPageRoute(builder: (context) => Page()));
-  }
+  // void _navigateTo(BuildContext context, String pageName) {
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     SnackBar(
+  //       content: Text('Navigating to $pageName'),
+  //       duration: const Duration(milliseconds: 500),
+  //     ),
+  //   );
+  //   // Replace with actual navigation when pages are created
+  //   // Navigator.push(context, MaterialPageRoute(builder: (context) => Page()));
+  // }
 }
