@@ -449,23 +449,21 @@ class ComboCarouselItem extends StatelessWidget {
   Widget build(BuildContext context) {
     String fullImageUrl = '';
     if (combo.imageUrl.isNotEmpty) {
+      // combo.imageUrl là "/uploads/combos/comboImage-1748837711631.jpg"
       if (combo.imageUrl.startsWith('http')) {
-        // Nếu imageUrl đã là một URL đầy đủ (ví dụ: từ một nguồn bên ngoài hoặc đã được xử lý trước đó)
-        fullImageUrl = combo.imageUrl;
+        fullImageUrl = combo.imageUrl; // Nếu đã là URL đầy đủ thì dùng luôn
       } else {
-        // Nếu imageUrl là đường dẫn tương đối từ server của bạn (ví dụ: /uploads/combos/ten_anh.jpg)
+        // Ghép base URL với đường dẫn tương đối
         fullImageUrl = AppConfig.getBaseUrlForFiles() +
             (combo.imageUrl.startsWith('/')
                 ? combo.imageUrl
                 : '/${combo.imageUrl}');
       }
     } else {
-      // Ảnh placeholder nếu không có imageUrl
-      fullImageUrl = 'https://via.placeholder.com/300x200?text=No+Image';
+      fullImageUrl =
+          'https://via.placeholder.com/300x200?text=No+Image'; // Ảnh mặc định
     }
-
-    // Bạn có thể thêm print ở đây để kiểm tra URL cuối cùng được tạo ra khi chạy app
-    print('Displaying Combo Image URL for ${combo.name}: $fullImageUrl');
+    print('Attempting to load image from Flutter with URL: $fullImageUrl');
 
     return GestureDetector(
       onTap: onTap,
@@ -473,42 +471,36 @@ class ComboCarouselItem extends StatelessWidget {
         margin: const EdgeInsets.symmetric(
             horizontal: 8.0), // Khoảng cách giữa các item trong carousel
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12.0),
-          child: Image.network(
-            fullImageUrl, // << SỬ DỤNG URL ĐẦY ĐỦ ĐÃ XỬ LÝ
-            fit: BoxFit.cover,
-            // width và height này sẽ được kiểm soát bởi itemWidth và itemHeight của Swiper
-            // nên có thể không cần thiết ở đây, hoặc chỉ để đảm bảo tỷ lệ nếu Swiper không set.
-            // width: MediaQuery.of(context).size.width * 0.75,
-            // height: 180,
-            loadingBuilder: (BuildContext context, Widget child,
-                ImageChunkEvent? loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Center(
-                child: CircularProgressIndicator(
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                          loadingProgress.expectedTotalBytes!
-                      : null,
-                ),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) {
-              // print('Error loading image for ${combo.name} ($fullImageUrl): $error');
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                child: Center(
-                  // Thêm Center để Icon ở giữa
-                  child: Icon(Icons.broken_image,
-                      color: Colors.grey[600], size: 50),
-                ),
-              );
-            },
-          ),
-        ),
+            borderRadius: BorderRadius.circular(12.0),
+            child: Image.network(
+              fullImageUrl,
+              fit: BoxFit.cover,
+              loadingBuilder: (BuildContext context, Widget child,
+                  ImageChunkEvent? loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                    child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null));
+              },
+              errorBuilder: (context, error, stackTrace) {
+                print('--- FLUTTER Image.network ERROR ---');
+                print('URL attempted: $fullImageUrl');
+                print('Error Type: ${error.runtimeType}');
+                print('Error Message: $error'); // <<<< LỖI CỤ THỂ SẼ HIỆN Ở ĐÂY
+                // print('StackTrace: $stackTrace'); // Bật nếu cần xem chi tiết hơn
+                return Container(
+                  decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(12.0)),
+                  child: Center(
+                      child: Icon(Icons.broken_image,
+                          color: Colors.grey[600], size: 50)),
+                );
+              },
+            )),
       ),
     );
   }

@@ -1,11 +1,12 @@
 import 'dart:io';
-
 import 'package:http/http.dart' as http;
 import 'package:myproject/config/config.dart';
 import 'package:myproject/models/inserted_combo_data.dart';
 import 'dart:convert';
 import '../models/combo_model.dart';
 import '../models/combo_product_config_item.dart';
+import 'package:path/path.dart' as p;
+import 'package:http_parser/http_parser.dart';
 
 class ComboService {
   // Hàm lấy tất cả combo
@@ -45,162 +46,187 @@ class ComboService {
 
   // Thêm combo
   Future<InsertedComboData> insertCombo({
-  required String name,
-  required String description,
-  required List<ComboProductConfigItem> productsConfig,
-  // required String imageUrl, // Bỏ tham số này nếu chỉ dùng upload file
-  double? price, // Sửa lại kiểu cho price nếu cần
-  File? imageFile, // << THÊM THAM SỐ FILE
-  String? authToken,
-}) async {
-  final Uri uri = Uri.parse(AppConfig.getApiUrl('/combo/insertCombo'));
-  var request = http.MultipartRequest('POST', uri);
+    required String name,
+    required String description,
+    required List<ComboProductConfigItem> productsConfig,
+    // required String imageUrl, // Bỏ tham số này nếu chỉ dùng upload file
+    double? price, // Sửa lại kiểu cho price nếu cần
+    File? imageFile, // << THÊM THAM SỐ FILE
+    String? authToken,
+  }) async {
+    final Uri uri = Uri.parse(AppConfig.getApiUrl('/combo/insertCombo'));
+    var request = http.MultipartRequest('POST', uri);
 
-  // Thêm các trường text
-  request.fields['name'] = name;
-  request.fields['description'] = description;
-  if (price != null) { // Kiểm tra null cho price
+    // Thêm các trường text
+    request.fields['name'] = name;
+    request.fields['description'] = description;
+    if (price != null) {
+      // Kiểm tra null cho price
       request.fields['price'] = price.toString();
-  } else {
-      request.fields['price'] = '0'; // Hoặc giá trị mặc định/xử lý lỗi
-  }
-
-  // Thêm mảng productsConfig (cần encode đúng cách cho multipart)
-  for (int i = 0; i < productsConfig.length; i++) {
-    request.fields['products[$i][productId]'] = productsConfig[i].productId;
-    request.fields['products[$i][quantityInCombo]'] = productsConfig[i].quantityInCombo.toString();
-    request.fields['products[$i][defaultSize]'] = productsConfig[i].defaultSize;
-    request.fields['products[$i][defaultSugarLevel]'] = productsConfig[i].defaultSugarLevel;
-    // Gửi defaultToppings nếu có
-    for (int j = 0; j < productsConfig[i].defaultToppings.length; j++) {
-        request.fields['products[$i][defaultToppings][$j]'] = productsConfig[i].defaultToppings[j];
-    }
-  }
-  
-  // Thêm file ảnh nếu có
-  if (imageFile != null) {
-    request.files.add(await http.MultipartFile.fromPath(
-      'comboImage', // Tên trường này phải khớp với backend multer config
-      imageFile.path,
-      // contentType: MediaType('image', 'jpeg'), // Tùy chọn: chỉ định content type
-    ));
-  } else {
-    // Nếu không có file mới và bạn cho phép nhập URL (đã bỏ ở ví dụ này)
-    // request.fields['imageUrl'] = imageUrl; // Gửi URL dạng text
-    // Hoặc không gửi gì cả nếu backend có ảnh mặc định
-  }
-
-  if (authToken != null && authToken.isNotEmpty) {
-    request.headers['Authorization'] = 'Bearer $authToken';
-  }
-  // Không cần 'Content-Type': 'application/json' nữa vì đây là multipart
-
-  try {
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      return parseInsertedComboData(response.body);
     } else {
-      print('Failed to insert combo. Status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
-      throw Exception(
-          'Failed to insert combo (Status Code: ${response.statusCode}) - Body: ${response.body}');
+      request.fields['price'] = '0'; // Hoặc giá trị mặc định/xử lý lỗi
     }
-  } catch (e) {
-    print('Error during insertCombo API call: $e');
-    throw Exception('Error inserting combo: $e');
+
+    // Thêm mảng productsConfig (cần encode đúng cách cho multipart)
+    for (int i = 0; i < productsConfig.length; i++) {
+      request.fields['products[$i][productId]'] = productsConfig[i].productId;
+      request.fields['products[$i][quantityInCombo]'] =
+          productsConfig[i].quantityInCombo.toString();
+      request.fields['products[$i][defaultSize]'] =
+          productsConfig[i].defaultSize;
+      request.fields['products[$i][defaultSugarLevel]'] =
+          productsConfig[i].defaultSugarLevel;
+      // Gửi defaultToppings nếu có
+      for (int j = 0; j < productsConfig[i].defaultToppings.length; j++) {
+        request.fields['products[$i][defaultToppings][$j]'] =
+            productsConfig[i].defaultToppings[j];
+      }
+    }
+
+    // Thêm file ảnh nếu có
+    if (imageFile != null) {
+      String fileName = imageFile.path.split('/').last;
+      String extension = p
+          .extension(imageFile.path)
+          .toLowerCase(); // Lấy phần mở rộng, ví dụ: .jpg, .png
+      MediaType? contentType;
+
+      if (extension == '.jpg' || extension == '.jpeg') {
+        contentType = MediaType('image', 'jpeg');
+      } else if (extension == '.png') {
+        contentType = MediaType('image', 'png');
+      } else if (extension == '.gif') {
+        contentType = MediaType('image', 'gif');
+      }
+      // Bạn có thể thêm các loại ảnh khác nếu cần
+
+      print(
+          'Uploading file: $fileName, Extension: $extension, ContentType: ${contentType?.toString()}'); // DEBUG
+
+      request.files.add(await http.MultipartFile.fromPath(
+        'comboImage', // Tên trường này phải khớp với backend multer config
+        imageFile.path,
+        filename:
+            fileName, // Nên cung cấp filename để backend có thể dùng nếu cần
+        contentType: contentType, // << QUAN TRỌNG: Chỉ định contentType
+      ));
+    } else {
+      // Nếu không có file mới và bạn cho phép nhập URL (đã bỏ ở ví dụ này)
+      // request.fields['imageUrl'] = imageUrl; // Gửi URL dạng text
+      // Hoặc không gửi gì cả nếu backend có ảnh mặc định
+    }
+
+    if (authToken != null && authToken.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $authToken';
+    }
+    // Không cần 'Content-Type': 'application/json' nữa vì đây là multipart
+
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return parseInsertedComboData(response.body);
+      } else {
+        print('Failed to insert combo. Status code: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        throw Exception(
+            'Failed to insert combo (Status Code: ${response.statusCode}) - Body: ${response.body}');
+      }
+    } catch (e) {
+      print('Error during insertCombo API call: $e');
+      throw Exception('Error inserting combo: $e');
+    }
   }
-}
 
   // Update combo
   Future<InsertedComboData> updateCombo({
-  required String comboId,
-  required String name,
-  required String description,
-  required List<ComboProductConfigItem> productsConfig,
-  // required String imageUrl, // Sẽ được xử lý bởi imageFile hoặc currentImageUrl
-  required double price,
-  File? imageFile, // File ảnh mới (có thể null nếu không thay đổi ảnh)
-  String? currentImageUrl, // URL của ảnh hiện tại (nếu không có imageFile mới và muốn giữ ảnh cũ)
-  String? authToken,
-}) async {
-  final Uri uri = Uri.parse(AppConfig.getApiUrl('/combo/updateCombo/$comboId'));
-  var request = http.MultipartRequest('PUT', uri); // Sử dụng PUT cho update
+    required String comboId,
+    required String name,
+    required String description,
+    required List<ComboProductConfigItem> productsConfig,
+    // required String imageUrl, // Sẽ được xử lý bởi imageFile hoặc currentImageUrl
+    required double price,
+    File? imageFile, // File ảnh mới (có thể null nếu không thay đổi ảnh)
+    String?
+        currentImageUrl, // URL của ảnh hiện tại (nếu không có imageFile mới và muốn giữ ảnh cũ)
+    String? authToken,
+  }) async {
+    final Uri uri =
+        Uri.parse(AppConfig.getApiUrl('/combo/updateCombo/$comboId'));
+    var request = http.MultipartRequest('PUT', uri); // Sử dụng PUT cho update
 
-  // Thêm các trường text vào request.fields
-  request.fields['name'] = name;
-  request.fields['description'] = description;
-  request.fields['price'] = price.toString();
+    // Thêm các trường text vào request.fields
+    request.fields['name'] = name;
+    request.fields['description'] = description;
+    request.fields['price'] = price.toString();
 
-  // Thêm mảng productsConfig
-  for (int i = 0; i < productsConfig.length; i++) {
-    request.fields['products[$i][productId]'] = productsConfig[i].productId;
-    request.fields['products[$i][quantityInCombo]'] = productsConfig[i].quantityInCombo.toString();
-    request.fields['products[$i][defaultSize]'] = productsConfig[i].defaultSize;
-    request.fields['products[$i][defaultSugarLevel]'] = productsConfig[i].defaultSugarLevel;
-    for (int j = 0; j < productsConfig[i].defaultToppings.length; j++) {
-      request.fields['products[$i][defaultToppings][$j]'] = productsConfig[i].defaultToppings[j];
+    // Thêm mảng productsConfig
+    for (int i = 0; i < productsConfig.length; i++) {
+      request.fields['products[$i][productId]'] = productsConfig[i].productId;
+      request.fields['products[$i][quantityInCombo]'] =
+          productsConfig[i].quantityInCombo.toString();
+      request.fields['products[$i][defaultSize]'] =
+          productsConfig[i].defaultSize;
+      request.fields['products[$i][defaultSugarLevel]'] =
+          productsConfig[i].defaultSugarLevel;
+      for (int j = 0; j < productsConfig[i].defaultToppings.length; j++) {
+        request.fields['products[$i][defaultToppings][$j]'] =
+            productsConfig[i].defaultToppings[j];
+      }
     }
-  }
 
-  // Xử lý ảnh
-  if (imageFile != null) {
-    // Nếu có file ảnh mới được chọn để upload
-    request.files.add(await http.MultipartFile.fromPath(
-      'comboImage', // Tên trường này phải khớp với backend multer config
-      imageFile.path,
-    ));
-    // Khi có file mới, backend sẽ xử lý và tạo imageUrl mới.
-    // Bạn không cần gửi currentImageUrl trong trường hợp này.
-    // Backend có thể tự xóa ảnh cũ nếu cần.
-  } else if (currentImageUrl != null && currentImageUrl.isNotEmpty) {
-    // Nếu không có file ảnh mới VÀ người dùng muốn giữ lại/chỉ định URL ảnh hiện tại
-    // (Backend sẽ nhận trường này nếu không có req.file)
-    request.fields['imageUrl'] = currentImageUrl;
-  }
-  // Nếu cả imageFile và currentImageUrl đều null/rỗng,
-  // backend có thể giữ nguyên ảnh cũ của combo hoặc xóa ảnh nếu logic được thiết kế như vậy.
-  // Hoặc bạn có thể thêm một trường boolean ví dụ 'removeCurrentImage': true nếu muốn xóa ảnh mà không thay thế.
+    // Xử lý ảnh
+    if (imageFile != null) {
+      // Nếu có file ảnh mới được chọn để upload
+      request.files.add(await http.MultipartFile.fromPath(
+        'comboImage', // Tên trường này phải khớp với backend multer config
+        imageFile.path,
+      ));
+    } else if (currentImageUrl != null && currentImageUrl.isNotEmpty) {
+      request.fields['imageUrl'] = currentImageUrl;
+    }
 
-  // Thêm headers
-  if (authToken != null && authToken.isNotEmpty) {
-    request.headers['Authorization'] = 'Bearer $authToken';
-  }
-  // http.MultipartRequest sẽ tự đặt Content-Type phù hợp.
+    // Thêm headers
+    if (authToken != null && authToken.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $authToken';
+    }
+    // http.MultipartRequest sẽ tự đặt Content-Type phù hợp.
 
-  try {
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
-    if (response.statusCode == 200) { // API update thường trả về 200 OK
-      return parseInsertedComboData(response.body);
-    } else {
-      print('Failed to update combo. Status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
-      // Thử parse lỗi JSON nếu có
-      String errorMessage = 'Failed to update combo (Status Code: ${response.statusCode})';
-      try {
-        final errorData = json.decode(response.body);
-        if (errorData['error'] is String) {
-          errorMessage = errorData['error'];
-        } else if (errorData['message'] is String) {
-           errorMessage = errorData['message'];
-        } else if (response.body.isNotEmpty) {
+      if (response.statusCode == 200) {
+        // API update thường trả về 200 OK
+        return parseInsertedComboData(response.body);
+      } else {
+        print('Failed to update combo. Status code: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        // Thử parse lỗi JSON nếu có
+        String errorMessage =
+            'Failed to update combo (Status Code: ${response.statusCode})';
+        try {
+          final errorData = json.decode(response.body);
+          if (errorData['error'] is String) {
+            errorMessage = errorData['error'];
+          } else if (errorData['message'] is String) {
+            errorMessage = errorData['message'];
+          } else if (response.body.isNotEmpty) {
             errorMessage += ' - Body: ${response.body}';
-        }
-      } catch (e) {
+          }
+        } catch (e) {
           if (response.body.isNotEmpty) {
             errorMessage += ' - Body: ${response.body}';
           }
+        }
+        throw Exception(errorMessage);
       }
-      throw Exception(errorMessage);
+    } catch (e) {
+      print('Error during updateCombo API call: $e');
+      throw Exception('Error updating combo: ${e.toString()}');
     }
-  } catch (e) {
-    print('Error during updateCombo API call: $e');
-    throw Exception('Error updating combo: ${e.toString()}');
   }
-}
 
   // Delete combo
   Future<DeleteResponseMessage> deleteCombo({

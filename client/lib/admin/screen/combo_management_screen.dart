@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/combo_model.dart'; // Đường dẫn tới file combo_model.dart của bạn
 import '../../services/combo_service.dart'; // Đường dẫn tới file api_service.dart của bạn
 import './edit_combo_screen.dart'; // Sẽ tạo màn hình này sau
+import '../../config/config.dart';
 
 class ComboManagementScreen extends StatefulWidget {
   const ComboManagementScreen({Key? key}) : super(key: key);
@@ -162,7 +163,24 @@ class _ComboManagementScreenState extends State<ComboManagementScreen> {
                 // final formattedPrice = NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(combo.price);
                 final formattedPrice =
                     "${combo.price.toStringAsFixed(0)}đ"; // Format đơn giản
-
+                String fullImageUrl = '';
+                if (combo.imageUrl.isNotEmpty) {
+                  if (combo.imageUrl.startsWith('http')) {
+                    // Nếu imageUrl đã là một URL đầy đủ (ví dụ: từ một nguồn bên ngoài)
+                    fullImageUrl = combo.imageUrl;
+                  } else {
+                    // Nếu imageUrl là đường dẫn tương đối từ server của bạn
+                    fullImageUrl = AppConfig.getBaseUrlForFiles() +
+                        (combo.imageUrl.startsWith('/')
+                            ? combo.imageUrl
+                            : '/${combo.imageUrl}');
+                  }
+                } else {
+                  // Ảnh placeholder nếu không có imageUrl hoặc imageUrl rỗng
+                  // Bạn có thể dùng một URL placeholder thực sự hoặc để errorBuilder xử lý
+                  fullImageUrl =
+                      'https://via.placeholder.com/80x80?text=No+Image';
+                }
                 return Card(
                   elevation: 2.0,
                   margin: const EdgeInsets.symmetric(vertical: 6.0),
@@ -177,7 +195,7 @@ class _ComboManagementScreenState extends State<ComboManagementScreen> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8.0),
                             child: Image.network(
-                              combo.imageUrl,
+                              fullImageUrl,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 return Container(

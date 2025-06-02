@@ -41,9 +41,13 @@ const comboStorage = multer.diskStorage({
 
 // Bộ lọc file (chỉ cho phép upload ảnh)
 const imageFileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("image/")) {
+  console.log("--- imageFileFilter ---");
+  console.log("File received by multer:", file); // In ra toàn bộ thông tin file multer nhận được
+  if (file.mimetype && file.mimetype.startsWith("image/")) {
+    console.log(`Mimetype hợp lệ: ${file.mimetype}`);
     cb(null, true);
   } else {
+    console.log(`Mimetype KHÔNG hợp lệ hoặc bị thiếu: ${file.mimetype}`);
     cb(new Error("Chỉ cho phép upload file ảnh (jpg, jpeg, png, gif)!"), false);
   }
 };
