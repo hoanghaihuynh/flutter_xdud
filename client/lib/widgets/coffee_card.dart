@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:myproject/models/products.dart';
 import 'package:myproject/utils/constants.dart';
 import 'package:myproject/utils/formatCurrency.dart';
+import 'package:myproject/config/config.dart';
 
 class CoffeeCard extends StatelessWidget {
   final Product product;
@@ -95,8 +96,25 @@ class CoffeeCard extends StatelessWidget {
   }
 
   Widget _buildProductImage() {
+    String fullImageUrl = '';
+    if (product.imageUrl.isNotEmpty) {
+      if (product.imageUrl.startsWith('http')) {
+        // Nếu imageUrl đã là một URL đầy đủ
+        fullImageUrl = product.imageUrl;
+      } else {
+        // Nếu imageUrl là đường dẫn tương đối từ server của bạn
+        fullImageUrl = AppConfig.getBaseUrlForFiles() +
+            (product.imageUrl.startsWith('/')
+                ? product.imageUrl
+                : '/${product.imageUrl}');
+      }
+    } else {
+      // Ảnh placeholder nếu không có imageUrl hoặc imageUrl rỗng
+      fullImageUrl = 'https://via.placeholder.com/150?text=No+Image';
+    }
+    // print('CoffeeCard - Displaying Image: $fullImageUrl for ${product.name}');
     return Image.network(
-      product.imageUrl,
+      fullImageUrl,
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
