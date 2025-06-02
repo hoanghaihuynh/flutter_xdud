@@ -10,6 +10,7 @@ import './../widgets/coffee_card.dart';
 import './cart_screen.dart';
 import './comboDetail_screen.dart';
 import 'package:flutter_swiper_view/flutter_swiper_view.dart';
+import 'package:myproject/config/config.dart';
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({Key? key}) : super(key: key);
@@ -446,18 +447,40 @@ class ComboCarouselItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String fullImageUrl = '';
+    if (combo.imageUrl.isNotEmpty) {
+      if (combo.imageUrl.startsWith('http')) {
+        // Nếu imageUrl đã là một URL đầy đủ (ví dụ: từ một nguồn bên ngoài hoặc đã được xử lý trước đó)
+        fullImageUrl = combo.imageUrl;
+      } else {
+        // Nếu imageUrl là đường dẫn tương đối từ server của bạn (ví dụ: /uploads/combos/ten_anh.jpg)
+        fullImageUrl = AppConfig.getBaseUrlForFiles() +
+            (combo.imageUrl.startsWith('/')
+                ? combo.imageUrl
+                : '/${combo.imageUrl}');
+      }
+    } else {
+      // Ảnh placeholder nếu không có imageUrl
+      fullImageUrl = 'https://via.placeholder.com/300x200?text=No+Image';
+    }
+
+    // Bạn có thể thêm print ở đây để kiểm tra URL cuối cùng được tạo ra khi chạy app
+    print('Displaying Combo Image URL for ${combo.name}: $fullImageUrl');
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8.0),
+        margin: const EdgeInsets.symmetric(
+            horizontal: 8.0), // Khoảng cách giữa các item trong carousel
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12.0),
           child: Image.network(
-            combo.imageUrl,
+            fullImageUrl, // << SỬ DỤNG URL ĐẦY ĐỦ ĐÃ XỬ LÝ
             fit: BoxFit.cover,
-            width: MediaQuery.of(context).size.width * 0.75,
-            height:
-                180, // Chiều cao này sẽ bị ghi đè bởi itemHeight của Swiper nếu có
+            // width và height này sẽ được kiểm soát bởi itemWidth và itemHeight của Swiper
+            // nên có thể không cần thiết ở đây, hoặc chỉ để đảm bảo tỷ lệ nếu Swiper không set.
+            // width: MediaQuery.of(context).size.width * 0.75,
+            // height: 180,
             loadingBuilder: (BuildContext context, Widget child,
                 ImageChunkEvent? loadingProgress) {
               if (loadingProgress == null) return child;
@@ -471,16 +494,17 @@ class ComboCarouselItem extends StatelessWidget {
               );
             },
             errorBuilder: (context, error, stackTrace) {
+              // print('Error loading image for ${combo.name} ($fullImageUrl): $error');
               return Container(
-                width: MediaQuery.of(context).size.width * 0.75,
-                height: 180, // Tương tự, có thể bị ghi đè
                 decoration: BoxDecoration(
-                  // Thêm decoration cho errorBuilder
                   color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(12.0),
                 ),
-                child:
-                    Icon(Icons.broken_image, color: Colors.grey[600], size: 50),
+                child: Center(
+                  // Thêm Center để Icon ở giữa
+                  child: Icon(Icons.broken_image,
+                      color: Colors.grey[600], size: 50),
+                ),
               );
             },
           ),

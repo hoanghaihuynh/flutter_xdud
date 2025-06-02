@@ -1,11 +1,16 @@
 // File: screens/admin/edit_combo_screen.dart
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../../models/combo_model.dart'; // Model Combo và ProductItem
 import '../../models/inserted_combo_data.dart';
 import '../../models/combo_product_config_item.dart';
 import '../../models/products.dart';
 import '../../services/product_service.dart';
-import '../../services/combo_service.dart'; // Service của bạn
+import '../../services/combo_service.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../config/config.dart';
+// Service của bạn
 
 class EditComboScreen extends StatefulWidget {
   final Combo? initialCombo; // Combo hiện tại để sửa, null nếu là tạo mới
@@ -21,15 +26,18 @@ class _EditComboScreenState extends State<EditComboScreen> {
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
   late TextEditingController _priceController;
-  late TextEditingController _imageUrlController;
-  List<String> _selectedProductIds =
-      []; // Sẽ lưu ID các sản phẩm được chọn cho combo
+  // late TextEditingController _imageUrlController; // Có thể không cần nữa nếu chỉ upload file
+
   List<ComboProductConfigItem> _configuredProducts = [];
+  File? _selectedImageFile; // Lưu file ảnh đã chọn
+  String?
+      _currentImageUrl; // Lưu URL ảnh hiện tại (nếu đang sửa và chưa chọn ảnh mới)
 
   bool _isLoading = false;
   final ComboService _comboService = ComboService();
   final ProductService _productService = ProductService();
   List<Product> _availableProducts = [];
+  final ImagePicker _picker = ImagePicker(); // Khởi tạo ImagePicker
 
   @override
   void initState() {
@@ -40,28 +48,24 @@ class _EditComboScreenState extends State<EditComboScreen> {
         TextEditingController(text: widget.initialCombo?.description ?? '');
     _priceController = TextEditingController(
         text: widget.initialCombo?.price.toString() ?? '');
-    _imageUrlController =
-        TextEditingController(text: widget.initialCombo?.imageUrl ?? '');
+    // _imageUrlController = // Bỏ hoặc xử lý khác nếu vẫn muốn nhập URL
+    //     TextEditingController(text: widget.initialCombo?.imageUrl ?? '');
+    _currentImageUrl = widget.initialCombo?.imageUrl;
 
     if (widget.initialCombo != null) {
-      _configuredProducts = widget.initialCombo!.products.map((configItem) {
-        // configItem ở đây đã là một đối tượng ComboProductConfigItem
-        // Tạo một instance mới để _configuredProducts có danh sách riêng,
-        // không ảnh hưởng đến widget.initialCombo.products.
+      _configuredProducts = List<ComboProductConfigItem>.from(
+          widget.initialCombo!.products.map((cp) {
         return ComboProductConfigItem(
-          productId: configItem.productId,
-          productName: configItem
-              .productName, // Quan trọng: productName cần được populate đúng
-          // từ ComboModel.fromJson -> ComboProductConfigItem.fromJson
-          quantityInCombo: configItem.quantityInCombo,
-          defaultSize: configItem.defaultSize,
-          defaultSugarLevel: configItem.defaultSugarLevel,
-          defaultToppings:
-              List<String>.from(configItem.defaultToppings), // Tạo một List mới
+          productId: cp.productId,
+          productName: cp.productName,
+          quantityInCombo: cp.quantityInCombo,
+          defaultSize: cp.defaultSize,
+          defaultSugarLevel: cp.defaultSugarLevel,
+          defaultToppings: List<String>.from(cp.defaultToppings),
         );
-      }).toList();
+      }));
     }
-    _fetchAllProductsAndMapNames(); // Gọi để tải sản phẩm và cập nhật tên nếu cần
+    _fetchAllProductsAndMapNames();
   }
 
   Future<void> _fetchAllProductsAndMapNames() async {
@@ -119,8 +123,30 @@ class _EditComboScreenState extends State<EditComboScreen> {
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
-    _imageUrlController.dispose();
+    // _imageUrlController.dispose(); // Bỏ nếu không dùng
     super.dispose();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 70, // Giảm chất lượng để giảm kích thước file
+        maxWidth: 800, // Giảm kích thước ảnh
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImageFile = File(pickedFile.path);
+          _currentImageUrl = null; // Xóa URL ảnh cũ khi đã chọn file mới
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi chọn ảnh: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _showProductSelectionDialog(
@@ -131,203 +157,115 @@ class _EditComboScreenState extends State<EditComboScreen> {
         const SnackBar(
             content: Text('Chưa có sản phẩm nào để chọn. Vui lòng thử lại.')),
       );
-      await _fetchAllProducts(); // Thử tải lại nếu chưa có sản phẩm
-      if (_availableProducts.isEmpty) return; // Nếu vẫn không có thì thoát
+      await _fetchAllProducts();
+      if (_availableProducts.isEmpty) return;
     }
 
-    // Khởi tạo selectedProduct:
-    // Nếu đang sửa (existingConfig != null), tìm product trong _availableProducts.
-    // Nếu không tìm thấy (có thể do product đã bị xóa), hoặc nếu tạo mới, lấy product đầu tiên.
-    Product selectedProduct = _availableProducts.first; // Mặc định
+    Product selectedProduct = _availableProducts.first;
     if (existingConfig != null) {
       try {
-        selectedProduct = _availableProducts
-            .firstWhere((p) => p.id == existingConfig.productId);
-      } catch (e) {
-        print(
-            "Không tìm thấy sản phẩm hiện tại của config trong danh sách available products. Dùng sản phẩm đầu tiên.");
-        // selectedProduct đã được gán _availableProducts.first ở trên
-      }
+        selectedProduct = _availableProducts.firstWhere((p) => p.id == existingConfig.productId);
+      } catch (e) { /* Dùng sản phẩm đầu tiên nếu không tìm thấy */ }
     }
 
-    final quantityController = TextEditingController(
-        text: existingConfig?.quantityInCombo.toString() ?? '1');
+    final quantityController = TextEditingController(text: existingConfig?.quantityInCombo.toString() ?? '1');
+    
+    List<String> productAvailableSizes = selectedProduct.sizes.isNotEmpty ? selectedProduct.sizes : ['M', 'L'];
+    String currentSize = existingConfig?.defaultSize ?? productAvailableSizes.first;
+    if (!productAvailableSizes.contains(currentSize)) currentSize = productAvailableSizes.first;
 
-    // Lấy size và sugar từ selectedProduct (là List<String>) hoặc từ existingConfig
-    // selectedProduct.size là List<String> các size mà sản phẩm đó hỗ trợ
-    List<String> productAvailableSizes = selectedProduct.sizes;
-    if (productAvailableSizes.isEmpty) {
-      productAvailableSizes = [
-        'M',
-        'L'
-      ]; // Giá trị mặc định nếu sản phẩm không có list size
-    }
-    String currentSize =
-        existingConfig?.defaultSize ?? productAvailableSizes.first;
-    if (!productAvailableSizes.contains(currentSize)) {
-      // Đảm bảo currentSize hợp lệ
-      currentSize = productAvailableSizes.first;
-    }
-
-    List<String> productAvailableSugarLevels = selectedProduct.sugarLevels;
-    if (productAvailableSugarLevels.isEmpty) {
-      productAvailableSugarLevels = [
-        '0 SL',
-        '50 SL',
-        '75 SL'
-      ]; // Giá trị mặc định
-    }
-    String currentSugarLevel =
-        existingConfig?.defaultSugarLevel ?? productAvailableSugarLevels.first;
-    if (!productAvailableSugarLevels.contains(currentSugarLevel)) {
-      // Đảm bảo currentSugarLevel hợp lệ
-      currentSugarLevel = productAvailableSugarLevels.first;
-    }
-
-    // List<String> currentToppingIds = List<String>.from(existingConfig?.defaultToppings ?? []); // Sẽ xử lý sau
+    List<String> productAvailableSugarLevels = selectedProduct.sugarLevels.isNotEmpty ? selectedProduct.sugarLevels : ['0 SL', '50 SL', '75 SL'];
+    String currentSugarLevel = existingConfig?.defaultSugarLevel ?? productAvailableSugarLevels.first;
+    if (!productAvailableSugarLevels.contains(currentSugarLevel)) currentSugarLevel = productAvailableSugarLevels.first;
 
     await showDialog<ComboProductConfigItem>(
       context: context,
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(builder: (context, setDialogState) {
-          // Lấy danh sách size và sugar options từ product hiện tại đang được chọn trong dialog
-          List<String> currentProductSizesForDropdown = selectedProduct.sizes;
-          if (currentProductSizesForDropdown.isEmpty) {
-            currentProductSizesForDropdown = ['M', 'L']; // Fallback
-          }
+          List<String> currentProductSizesForDropdown = selectedProduct.sizes.isNotEmpty ? selectedProduct.sizes : ['M', 'L'];
+          List<String> currentProductSugarLevelsForDropdown = selectedProduct.sugarLevels.isNotEmpty ? selectedProduct.sugarLevels : ['0 SL', '50 SL', '75 SL'];
 
-          List<String> currentProductSugarLevelsForDropdown =
-              selectedProduct.sugarLevels;
-          if (currentProductSugarLevelsForDropdown.isEmpty) {
-            currentProductSugarLevelsForDropdown = [
-              '0 SL',
-              '50 SL',
-              '75 SL'
-            ]; // Fallback
-          }
-
-          // Đảm bảo giá trị đang chọn (currentSize, currentSugarLevel) nằm trong danh sách options
-          if (!currentProductSizesForDropdown.contains(currentSize)) {
-            currentSize = currentProductSizesForDropdown.first;
-          }
-          if (!currentProductSugarLevelsForDropdown
-              .contains(currentSugarLevel)) {
-            currentSugarLevel = currentProductSugarLevelsForDropdown.first;
-          }
+          if (!currentProductSizesForDropdown.contains(currentSize)) currentSize = currentProductSizesForDropdown.first;
+          if (!currentProductSugarLevelsForDropdown.contains(currentSugarLevel)) currentSugarLevel = currentProductSugarLevelsForDropdown.first;
 
           return AlertDialog(
-            title: Text(existingConfig == null
-                ? 'Thêm Sản Phẩm Vào Combo'
-                : 'Sửa Sản Phẩm Trong Combo'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+            title: Text(existingConfig == null ? 'Thêm Sản Phẩm Vào Combo' : 'Sửa Sản Phẩm Trong Combo'),
+            content: SingleChildScrollView(child: Column( /* ... Nội dung dialog ... */ 
+             mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   DropdownButtonFormField<Product>(
-                    decoration:
-                        const InputDecoration(labelText: 'Chọn sản phẩm'),
+                    decoration: const InputDecoration(labelText: 'Chọn sản phẩm'),
                     value: selectedProduct,
                     isExpanded: true,
                     items: _availableProducts.map((Product product) {
                       return DropdownMenuItem<Product>(
                         value: product,
-                        child:
-                            Text(product.name, overflow: TextOverflow.ellipsis),
+                        child: Text(product.name, overflow: TextOverflow.ellipsis),
                       );
                     }).toList(),
                     onChanged: (Product? newValue) {
                       setDialogState(() {
                         selectedProduct = newValue!;
-                        // Khi đổi sản phẩm, cập nhật lại currentSize và currentSugarLevel
-                        // dựa trên danh sách size/sugar của sản phẩm mới
-                        List<String> newProductSizes = selectedProduct.sizes;
-                        if (newProductSizes.isEmpty)
-                          newProductSizes = ['M', 'L'];
+                        List<String> newProductSizes = selectedProduct.sizes.isNotEmpty ? selectedProduct.sizes : ['M', 'L'];
                         currentSize = newProductSizes.first;
-
-                        List<String> newProductSugarLevels =
-                            selectedProduct.sugarLevels;
-                        if (newProductSugarLevels.isEmpty)
-                          newProductSugarLevels = ['0 SL', '50 SL', '75 SL'];
+                        List<String> newProductSugarLevels = selectedProduct.sugarLevels.isNotEmpty ? selectedProduct.sugarLevels : ['0 SL', '50 SL', '75 SL'];
                         currentSugarLevel = newProductSugarLevels.first;
                       });
                     },
                   ),
                   TextFormField(
                     controller: quantityController,
-                    decoration: const InputDecoration(
-                        labelText: 'Số lượng trong combo'),
+                    decoration: const InputDecoration(labelText: 'Số lượng trong combo'),
                     keyboardType: TextInputType.number,
                     validator: (value) {
-                      if (value == null ||
-                          value.isEmpty ||
-                          (int.tryParse(value) ?? 0) <= 0) {
+                      if (value == null || value.isEmpty || (int.tryParse(value) ?? 0) <= 0) {
                         return 'Số lượng phải lớn hơn 0';
                       }
                       return null;
                     },
                   ),
                   DropdownButtonFormField<String>(
-                    decoration:
-                        const InputDecoration(labelText: 'Size mặc định'),
+                    decoration: const InputDecoration(labelText: 'Size mặc định'),
                     value: currentSize,
                     isExpanded: true,
-                    // Sử dụng danh sách size của sản phẩm đang được chọn trong dialog
                     items: currentProductSizesForDropdown.map((String size) {
-                      return DropdownMenuItem<String>(
-                          value: size, child: Text(size));
+                      return DropdownMenuItem<String>(value: size, child: Text(size));
                     }).toList(),
                     onChanged: (String? newValue) {
                       setDialogState(() => currentSize = newValue!);
                     },
                   ),
                   DropdownButtonFormField<String>(
-                    decoration:
-                        const InputDecoration(labelText: 'Mức đường mặc định'),
+                    decoration: const InputDecoration(labelText: 'Mức đường mặc định'),
                     value: currentSugarLevel,
                     isExpanded: true,
-                    // Sử dụng danh sách sugar level của sản phẩm đang được chọn trong dialog
-                    items: currentProductSugarLevelsForDropdown
-                        .map((String sugar) {
-                      return DropdownMenuItem<String>(
-                          value: sugar, child: Text(sugar));
+                    items: currentProductSugarLevelsForDropdown.map((String sugar) {
+                      return DropdownMenuItem<String>(value: sugar, child: Text(sugar));
                     }).toList(),
                     onChanged: (String? newValue) {
                       setDialogState(() => currentSugarLevel = newValue!);
                     },
                   ),
                   const SizedBox(height: 8),
-                  const Text("Topping mặc định: (Sẽ làm sau)",
-                      style: TextStyle(color: Colors.grey)),
+                  const Text("Topping mặc định: (Sẽ làm sau)", style: TextStyle(color: Colors.grey)),
                 ],
-              ),
-            ),
+            )),
             actions: <Widget>[
-              TextButton(
-                child: const Text('Hủy'),
-                onPressed: () => Navigator.of(dialogContext).pop(),
-              ),
+              TextButton(child: const Text('Hủy'), onPressed: () => Navigator.of(dialogContext).pop()),
               TextButton(
                 child: Text(existingConfig == null ? 'Thêm' : 'Cập nhật'),
                 onPressed: () {
-                  if (selectedProduct !=
-                          null && // selectedProduct đã được gán ở trên, không thể null ở đây
-                      (int.tryParse(quantityController.text) ?? 0) > 0) {
+                  if ((int.tryParse(quantityController.text) ?? 0) > 0) {
                     final newConfig = ComboProductConfigItem(
-                      productId: selectedProduct
-                          .id, // Đã sửa: selectedProduct không thể null
-                      productName: selectedProduct.name, // Đã sửa
+                      productId: selectedProduct.id,
+                      productName: selectedProduct.name,
                       quantityInCombo: int.parse(quantityController.text),
                       defaultSize: currentSize,
                       defaultSugarLevel: currentSugarLevel,
-                      defaultToppings: [], // Tạm thời để trống
+                      defaultToppings: [], 
                     );
                     Navigator.of(dialogContext).pop(newConfig);
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text(
-                            'Vui lòng chọn sản phẩm và nhập số lượng hợp lệ.')));
-                  }
+                  } else { /* show error */ }
                 },
               ),
             ],
@@ -350,58 +288,59 @@ class _EditComboScreenState extends State<EditComboScreen> {
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       if (_configuredProducts.isEmpty) {
-        // Sử dụng _configuredProducts thay vì _selectedProductIds
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Vui lòng thêm ít nhất một sản phẩm vào combo.')),
+          const SnackBar(content: Text('Vui lòng thêm ít nhất một sản phẩm vào combo.')),
+        );
+        return;
+      }
+      // Nếu tạo mới mà không chọn ảnh, hoặc sửa mà không chọn ảnh mới và không có ảnh cũ
+      if (widget.initialCombo == null && _selectedImageFile == null) {
+         ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vui lòng chọn ảnh cho combo.')),
         );
         return;
       }
 
-      setState(() {
-        _isLoading = true;
-      });
+
+      setState(() { _isLoading = true; });
 
       try {
-        // Lấy token xác thực từ một nơi an toàn, ví dụ: SharedPreferences hoặc một state manager
-        String? userToken =
-            "YOUR_ADMIN_AUTH_TOKEN"; // THAY THẾ BẰNG TOKEN THỰC TẾ
+        String? userToken = "YOUR_ADMIN_AUTH_TOKEN"; // THAY BẰNG TOKEN THỰC TẾ
 
-        final List<Map<String, dynamic>> productsConfigJson =
-            _configuredProducts.map((config) => config.toJson()).toList();
-
+        // Truyền _selectedImageFile vào service
         if (widget.initialCombo == null) {
+          // Tạo mới
           InsertedComboData newCombo = await _comboService.insertCombo(
             name: _nameController.text,
             description: _descriptionController.text,
-            productsConfig: _configuredProducts, // << SỬA Ở ĐÂY
-            imageUrl: _imageUrlController.text,
+            productsConfig: _configuredProducts,
             price: double.tryParse(_priceController.text) ?? 0,
             authToken: userToken,
+            imageFile: _selectedImageFile, // << TRUYỀN FILE ẢNH
+            // imageUrl: _imageUrlController.text, // Bỏ nếu không dùng nhập URL
           );
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Đã tạo combo "${newCombo.name}" thành công!'),
-                backgroundColor: Colors.green,
-              ),
+              SnackBar(content: Text('Đã tạo combo "${newCombo.name}" thành công!')),
             );
             Navigator.pop(context, true);
           }
         } else {
+          // Cập nhật
           InsertedComboData updatedCombo = await _comboService.updateCombo(
             comboId: widget.initialCombo!.id,
             name: _nameController.text,
             description: _descriptionController.text,
-            productsConfig: _configuredProducts, // << SỬA Ở ĐÂY
-            imageUrl: _imageUrlController.text,
+            productsConfig: _configuredProducts,
             price: double.tryParse(_priceController.text) ?? 0,
             authToken: userToken,
+            imageFile: _selectedImageFile, // << TRUYỀN FILE ẢNH (có thể null nếu không thay đổi)
+            currentImageUrl: _selectedImageFile == null ? _currentImageUrl : null, // Gửi URL hiện tại nếu không có file mới
+            // imageUrl: _imageUrlController.text, // Bỏ nếu không dùng nhập URL
           );
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text('Đã cập nhật combo "${updatedCombo.name}"!')),
+              SnackBar(content: Text('Đã cập nhật combo "${updatedCombo.name}"!')),
             );
             Navigator.pop(context, true);
           }
@@ -414,15 +353,12 @@ class _EditComboScreenState extends State<EditComboScreen> {
         }
       } finally {
         if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
+          setState(() { _isLoading = false; });
         }
       }
     }
   }
 
-  @override
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -483,13 +419,13 @@ class _EditComboScreenState extends State<EditComboScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _imageUrlController,
-                      decoration: const InputDecoration(
-                          labelText: 'URL Hình ảnh',
-                          border: OutlineInputBorder()),
-                      keyboardType: TextInputType.url,
-                    ),
+                    // TextFormField(
+                    //   controller: _imageUrlController,
+                    //   decoration: const InputDecoration(
+                    //       labelText: 'URL Hình ảnh',
+                    //       border: OutlineInputBorder()),
+                    //   keyboardType: TextInputType.url,
+                    // ),
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

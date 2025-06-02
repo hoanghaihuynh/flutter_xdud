@@ -61,7 +61,7 @@ exports.updateCombo = async (req, res) => {
   try {
     // Nếu có file mới được upload cho việc cập nhật
     if (req.file) {
-      updateData.imageUrl = `/public/uploads/combos/${req.file.filename}`;
+      updateData.imageUrl = `/uploads/combos/${req.file.filename}`;
       // TODO: Cân nhắc xóa file ảnh cũ của combo này trên server nếu bạn muốn
       // Điều này cần query combo cũ, lấy imageUrl cũ, rồi dùng fs.unlink
     }
