@@ -407,7 +407,9 @@ class _EditComboScreenState extends State<EditComboScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                  content: Text('Đã tạo combo "${newCombo.name}" thành công!')),
+                content: Text('ĐÃ TẠO COMBO "${newCombo.name}" THÀNH CÔNG!'),
+                backgroundColor: Colors.green,
+              ),
             );
             Navigator.pop(context, true);
           }
